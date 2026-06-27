@@ -1,0 +1,470 @@
+[
+  {
+    "id": "seed_001",
+    "role": "Backend Developer",
+    "input_format": "slack_message",
+    "raw_jd": "need someone for the data team, knows python and stuff, good attitude, rockstar mentality, will report to me, fast paced startup",
+    "one_line_summary": "An uncertain-level role on a startup data team with minimal detail provided..",
+    "ai_seniority": "Uncertain",
+    "required_skills": [
+      "python"
+    ],
+    "raw_text_justification": "need someone for the data team, knows python and stuff",
+    "native_label": null,
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [
+      "rockstar",
+      "fast paced"
+    ],
+    "pay_range_present": false,
+    "quality_score": 20,
+    "score_breakdown": [
+      "+20 verified"
+    ],
+    "content_hash": "7836e44a738c755bb3aa4835eb0f25d6b7d3a9bb858a7ee5d128fd27a794cd42",
+    "status": "ok"
+  },
+  {
+    "id": "seed_002",
+    "role": "Frontend Developer",
+    "input_format": "slack_message",
+    "raw_jd": "hi we need a frontend person, freshers ok, react preferred, will build screens from figma. send cv to me directly",
+    "one_line_summary": "An Entry-Level role focused on building frontend screens in a development environment..",
+    "ai_seniority": "Entry-Level",
+    "required_skills": [
+      "react",
+      "figma"
+    ],
+    "raw_text_justification": "hi we need a frontend person, freshers ok, react preferred",
+    "native_label": "Entry-Level",
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [],
+    "pay_range_present": false,
+    "quality_score": 55,
+    "score_breakdown": [
+      "+25 level",
+      "+20 verified",
+      "+10 no-bias"
+    ],
+    "content_hash": "514d4d14a9d85b73642586394a7d6dee20fb9462fc0ac189a22b97a628dcc62c",
+    "status": "ok"
+  },
+  {
+    "id": "seed_003",
+    "role": "Data Engineer",
+    "input_format": "email",
+    "raw_jd": "Rahul - can you open a req for a data engineer? 2-4 yrs, python spark airflow, they'll maintain our pipelines. budget is around 12-18 LPA. not a lead role, just an IC.",
+    "one_line_summary": "A mid-level role focused on data pipeline maintenance in an unspecified environment..",
+    "ai_seniority": "Mid-Level",
+    "required_skills": [
+      "python",
+      "spark",
+      "airflow"
+    ],
+    "raw_text_justification": "2-4 yrs, python spark airflow, they'll maintain our pipelines. budget is around 12-18 LPA. not a lead role, just an IC.",
+    "native_label": null,
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [],
+    "pay_range_present": true,
+    "quality_score": 90,
+    "score_breakdown": [
+      "+20 skills≥3",
+      "+25 level",
+      "+20 verified",
+      "+15 pay range",
+      "+10 no-bias"
+    ],
+    "content_hash": "ccef95e28ad63bc977c3acab79725ab2ca42ce31a63bdf2b17673cb854dbf626",
+    "status": "ok"
+  },
+  {
+    "id": "seed_004",
+    "role": "ML Engineer",
+    "input_format": "slack_message",
+    "raw_jd": "need a strong ml engineer, 6+ yrs, pytorch mlops experience, ideally llm background. will own the model infra and mentor the junior ml folks. report to vp eng.",
+    "one_line_summary": "A Senior role focused on owning model infrastructure and mentoring junior ML engineers in an advanced ML environment..",
+    "ai_seniority": "Senior",
+    "required_skills": [
+      "pytorch",
+      "mlops",
+      "llm"
+    ],
+    "raw_text_justification": "6+ yrs, pytorch mlops experience, ideally llm background. will own the model infra and mentor the junior ml folks.",
+    "native_label": "Executive",
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [],
+    "pay_range_present": false,
+    "quality_score": 75,
+    "score_breakdown": [
+      "+20 skills≥3",
+      "+25 level",
+      "+20 verified",
+      "+10 no-bias"
+    ],
+    "content_hash": "7e00c3af89657e32279db0116de68b6059c21eb0d31138b68c2840738bc96efa",
+    "status": "ok"
+  },
+  {
+    "id": "seed_005",
+    "role": "Product Manager",
+    "input_format": "email",
+    "raw_jd": "we need a pm, someone senior or mid we are flexible, good product sense, agile background, must be a go-getter who can hustle. young team, startup culture.",
+    "one_line_summary": "An uncertain-level role focused on product management in a startup culture environment..",
+    "ai_seniority": "Uncertain",
+    "required_skills": [],
+    "raw_text_justification": "we need a pm, someone senior or mid we are flexible",
+    "native_label": "Senior",
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [
+      "young team",
+      "hustle",
+      "go-getter",
+      "startup culture"
+    ],
+    "pay_range_present": false,
+    "quality_score": 20,
+    "score_breakdown": [
+      "+20 verified"
+    ],
+    "content_hash": "b759ac0918ef8d9bb242f98b17bdc8249c7ebf1fd3ab492c5f2556d93eb6d219",
+    "status": "ok"
+  },
+  {
+    "id": "seed_006",
+    "role": "DevOps Engineer",
+    "input_format": "intake_form",
+    "raw_jd": "Job Title: DevOps / Infra (senior level)\nKey skills: k8s, terraform, AWS\nExperience: 5+ years\nResponsibilities: own the infra, set up SRE practices, lead infra migrations\nReports to: CTO\nSalary: 25-35 LPA\nTeam size: small, 2-3 people under this person\nNice to have: python scripting",
+    "one_line_summary": "A Senior role focused on owning infrastructure and leading SRE practices and migrations in a small team environment..",
+    "ai_seniority": "Senior",
+    "required_skills": [
+      "kubernetes",
+      "terraform",
+      "aws",
+      "python scripting"
+    ],
+    "raw_text_justification": "Responsibilities: own the infra, set up SRE practices, lead infra migrations",
+    "native_label": "Executive",
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [],
+    "pay_range_present": true,
+    "quality_score": 90,
+    "score_breakdown": [
+      "+20 skills≥3",
+      "+25 level",
+      "+20 verified",
+      "+15 pay range",
+      "+10 no-bias"
+    ],
+    "content_hash": "e1524d39bc4f308a8fc24f9dc87eed704fd0e978c6c79575d02551d15c50de81",
+    "status": "ok"
+  },
+  {
+    "id": "seed_007",
+    "role": "UX Designer",
+    "input_format": "intake_form",
+    "raw_jd": "Role: Designer (UI/UX)\nExperience: 0-1 year or fresher ok\nTools: figma\nWhat they'll do: support the senior designer, make screens from wireframes\nSalary: not decided yet\nOther: good eye for design, eager to learn",
+    "one_line_summary": "An Entry-Level role focused on UI/UX design support in a design team environment..",
+    "ai_seniority": "Entry-Level",
+    "required_skills": [
+      "figma"
+    ],
+    "raw_text_justification": "Experience: 0-1 year or fresher ok",
+    "native_label": "Senior",
+    "is_verified": true,
+    "audit_mismatch": true,
+    "bias_flags": [],
+    "pay_range_present": false,
+    "quality_score": 55,
+    "score_breakdown": [
+      "+25 level",
+      "+20 verified",
+      "+10 no-bias"
+    ],
+    "content_hash": "d160efed9064e5c1fb9e3741356f5474377fd9c1d6506872d6e867c45fe2350b",
+    "status": "ok"
+  },
+  {
+    "id": "seed_008",
+    "role": "Data Scientist",
+    "input_format": "intake_form",
+    "raw_jd": "Role: Data Scientist\nSkills needed: python, ML, sql\nExperience: experienced preferred\nWhat they do: analytics and models\nSalary: competitive\nAnything else: smart, independent",
+    "one_line_summary": "An uncertain-level role focused on analytics and models with minimal detail provided..",
+    "ai_seniority": "Uncertain",
+    "required_skills": [
+      "python",
+      "machine learning",
+      "sql"
+    ],
+    "raw_text_justification": "Experience: experienced preferred",
+    "native_label": null,
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [],
+    "pay_range_present": false,
+    "quality_score": 50,
+    "score_breakdown": [
+      "+20 skills≥3",
+      "+20 verified",
+      "+10 no-bias"
+    ],
+    "content_hash": "c789b4fda080631754ad1d0051f29dfb11e7b1871e96ccb399f2ed29b8bcc7af",
+    "status": "ok"
+  },
+  {
+    "id": "seed_009",
+    "role": "Android Developer",
+    "input_format": "old_jd_copypaste",
+    "raw_jd": "Android Developer (SDE 1 & 2)\nWe are looking for an Android Developer with 2-4 years of experience in building consumer Android applications.\nRequirements:\n- Java/Kotlin\n- REST API integration\n- MVVM architecture\n[NOTE FROM MANAGER: same as last year's posting, please also add Flutter if possible, and remove the BlackBerry reference lol]",
+    "one_line_summary": "A Mid-Level role focused on building consumer Android applications in a consumer applications environment..",
+    "ai_seniority": "Mid-Level",
+    "required_skills": [
+      "java",
+      "kotlin",
+      "rest api",
+      "mvvm",
+      "flutter"
+    ],
+    "raw_text_justification": "We are looking for an Android Developer with 2-4 years of experience in building consumer Android applications.",
+    "native_label": null,
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [],
+    "pay_range_present": false,
+    "quality_score": 75,
+    "score_breakdown": [
+      "+20 skills≥3",
+      "+25 level",
+      "+20 verified",
+      "+10 no-bias"
+    ],
+    "content_hash": "0ae4f3730ba0749435704b3ca1d3a8994f2d7cff6127fca3548db23a604d67ad",
+    "status": "ok"
+  },
+  {
+    "id": "seed_010",
+    "role": "Backend Developer",
+    "input_format": "old_jd_copypaste",
+    "raw_jd": "Associate Software Engineer - Backend\nLooking for someone to join the backend team.\n3+ years node.js, mongodb, AWS.\nYou will design the architecture for our new platform, lead the backend squad of 4 engineers, and make technical hiring decisions.\n\n[Manager note: Priya said just reuse last year's JD but this is actually a senior IC role now, the title is wrong]",
+    "one_line_summary": "A Senior role focused on backend architecture design and team leadership for a new platform..",
+    "ai_seniority": "Senior",
+    "required_skills": [
+      "node.js",
+      "mongodb",
+      "aws"
+    ],
+    "raw_text_justification": "You will design the architecture for our new platform, lead the backend squad of 4 engineers, and make technical hiring decisions.",
+    "native_label": "Senior",
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [],
+    "pay_range_present": false,
+    "quality_score": 75,
+    "score_breakdown": [
+      "+20 skills≥3",
+      "+25 level",
+      "+20 verified",
+      "+10 no-bias"
+    ],
+    "content_hash": "491e9a5ab608c48824aa0de5e342a339af04a81e67e38a7227592886b0e58069",
+    "status": "ok"
+  },
+  {
+    "id": "seed_011",
+    "role": "Engineering Manager",
+    "input_format": "verbal_call_notes",
+    "raw_jd": "-- Notes from intake call with Ananya (CTO), 14 June --\nLooking for head of engineering, 10+ yrs, has managed managers before (not just ICs). Will define eng culture and own the technical roadmap. Reports directly to CEO. Has scaled team from 10 to 50+ before ideally. Budget: ESOPs + 60-80L. Ananya said: 'this is basically a co-founder level hire'",
+    "one_line_summary": "An Executive role focused on defining engineering culture and owning the technical roadmap in a high-growth startup environment..",
+    "ai_seniority": "Executive",
+    "required_skills": [],
+    "raw_text_justification": "Looking for head of engineering, 10+ yrs, has managed managers before (not just ICs). Will define eng culture and own the technical roadmap.",
+    "native_label": "Executive",
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [],
+    "pay_range_present": true,
+    "quality_score": 70,
+    "score_breakdown": [
+      "+25 level",
+      "+20 verified",
+      "+15 pay range",
+      "+10 no-bias"
+    ],
+    "content_hash": "849221eeffa46a6598f1f30c352189b512a44b63ea100113707bec7081819f09",
+    "status": "ok"
+  },
+  {
+    "id": "seed_012",
+    "role": "Full Stack Developer",
+    "input_format": "verbal_call_notes",
+    "raw_jd": "-- Call notes from Vikram (Product Lead) --\nNeeds a fullstack dev, react + node, postgres. 2-4 years. Not a senior, just someone who can ship. Young team, needs good energy, must be a cultural fit with startup hustle. Vikram said he'll know the right person when he sees them (no further clarity given on what that means).",
+    "one_line_summary": "A mid-level role focused on fullstack development in a startup environment..",
+    "ai_seniority": "Mid-Level",
+    "required_skills": [
+      "react",
+      "node",
+      "postgresql"
+    ],
+    "raw_text_justification": "Needs a fullstack dev, react + node, postgres. 2-4 years. Not a senior, just someone who can ship.",
+    "native_label": null,
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [
+      "young team",
+      "cultural fit",
+      "hustle"
+    ],
+    "pay_range_present": false,
+    "quality_score": 65,
+    "score_breakdown": [
+      "+20 skills≥3",
+      "+25 level",
+      "+20 verified"
+    ],
+    "content_hash": "01cc777c93ff8c6e45492a3940ad20a06cbaa6b4afc0b3a1d8f12d788d769d97",
+    "status": "ok"
+  },
+  {
+    "id": "seed_013",
+    "role": "Software Engineer",
+    "input_format": "slack_message",
+    "raw_jd": "senior software engineer opening on our team. java spring boot mysql. 1-2 yrs exp is fine. will get tasks from the tech lead and code them up. good for someone who wants to learn.",
+    "one_line_summary": "An Entry-Level role focused on coding assigned tasks in a software development environment..",
+    "ai_seniority": "Entry-Level",
+    "required_skills": [
+      "java",
+      "spring boot",
+      "mysql"
+    ],
+    "raw_text_justification": "1-2 yrs exp is fine. will get tasks from the tech lead and code them up.",
+    "native_label": "Senior",
+    "is_verified": true,
+    "audit_mismatch": true,
+    "bias_flags": [],
+    "pay_range_present": false,
+    "quality_score": 75,
+    "score_breakdown": [
+      "+20 skills≥3",
+      "+25 level",
+      "+20 verified",
+      "+10 no-bias"
+    ],
+    "content_hash": "0010566b23732738b7df4eaaa46cc526e59157ddd618c0033393485da73437c0",
+    "status": "ok"
+  },
+  {
+    "id": "seed_014",
+    "role": "Data Scientist",
+    "input_format": "intake_form",
+    "raw_jd": "Role: Junior Data Scientist\nExperience: 7+ years in ML/data science\nResponsibilities: define ML strategy for the company, publish research, represent company at conferences, build and hire a team of 5 data scientists\nReports to: CTO",
+    "one_line_summary": "An Executive role focused on defining ML strategy and building a data science team in a strategic company environment..",
+    "ai_seniority": "Executive",
+    "required_skills": [],
+    "raw_text_justification": "Experience: 7+ years in ML/data science",
+    "native_label": "Executive",
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [],
+    "pay_range_present": false,
+    "quality_score": 55,
+    "score_breakdown": [
+      "+25 level",
+      "+20 verified",
+      "+10 no-bias"
+    ],
+    "content_hash": "682533efb41de4e63f355789e2fd9541931cbace60ef8f312733214a26868f76",
+    "status": "ok"
+  },
+  {
+    "id": "seed_015",
+    "role": "Backend Developer",
+    "input_format": "slack_message",
+    "raw_jd": "backend dev needed. node and mongo. salary negotiable. good culture. apply if interested.",
+    "one_line_summary": "An uncertain-level role focused on backend development in an unspecified environment..",
+    "ai_seniority": "Uncertain",
+    "required_skills": [
+      "node",
+      "mongodb"
+    ],
+    "raw_text_justification": "backend dev needed. node and mongo.",
+    "native_label": null,
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [],
+    "pay_range_present": false,
+    "quality_score": 30,
+    "score_breakdown": [
+      "+20 verified",
+      "+10 no-bias"
+    ],
+    "content_hash": "c433a3056e508ecd5477d05681155cdd3bd6fa5c18c85fac46d96fc4fca67d64",
+    "status": "ok"
+  },
+  {
+    "id": "paste_78c2a004",
+    "role": "Pasted JD",
+    "input_format": "paste",
+    "raw_jd": "we need a backend person asap, node + mongo, \nsalary negotiable. team is small, startup vibe, hustle culture.\nmust be a rockstar. no specific exp requirement tbh\n\nOpening: Sr. Data Scientist\n7+ years in ML/data science mandatory. Will define ML strategy \nfor the company, publish research, represent at conferences.\nComp: 40-60 LPA. Reports to CTO. Will manage a team of 3.\n\njunior android dev needed - java/kotlin, 1-2 yrs ok, \nwill work under tech lead. mvvm architecture. \nyoung and dynamic team!",
+    "one_line_summary": "A Senior role focused on defining ML strategy and publishing research in a company-wide environment..",
+    "ai_seniority": "Senior",
+    "required_skills": [],
+    "raw_text_justification": "7+ years in ML/data science mandatory. Will define ML strategy for the company, publish research, represent at conferences.",
+    "native_label": null,
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [
+      "rockstar",
+      "hustle"
+    ],
+    "pay_range_present": true,
+    "quality_score": 60,
+    "score_breakdown": [
+      "+25 level",
+      "+20 verified",
+      "+15 pay range"
+    ],
+    "content_hash": "78c2a004389f3825b4f4c006cbc10efc600b11822188048d1b422b1b7bd37567",
+    "status": "ok"
+  },
+  {
+    "id": "paste_778192d4",
+    "role": "Pasted JD",
+    "input_format": "paste",
+    "raw_jd": "We are looking for a Senior Backend Engineer to join our fast growing product team in Bangalore.\n\nRole: Backend Developer (Senior)\nLocation: Hybrid – Bangalore / Remote\nCTC: 18-24 LPA depending on experience\n\nAbout the role:\nYou will own the design and development of our core APIs and microservices. We need a rockstar who can hit the ground running and work independently with minimal supervision.\n\nResponsibilities:\n- Design, build and maintain REST and GraphQL APIs\n- Work closely with frontend and DevOps teams to ship features\n- Own database schema design and query optimization (PostgreSQL, Redis)\n- Lead code reviews and mentor junior engineers\n- Contribute to system architecture decisions and technical roadmap\n- 5+ years of professional backend engineering experience required\n- Experience with distributed systems and cloud infrastructure (AWS preferred)\n\nMust have skills:\n- Python or Node.js (we use both)\n- PostgreSQL and Redis\n- Docker and Kubernetes basics\n- Git and CI/CD pipelines (GitHub Actions)\n- Strong understanding of REST API design\n\nNice to have:\n- Experience with Kafka or RabbitMQ\n- Prior experience at a Series B or later startup\n- GraphQL\n\nWe move fast. If you are a ninja coder who loves ownership and impact, this is the role for you.",
+    "one_line_summary": "A Senior role focused on designing and developing core APIs and microservices in a fast-growing product environment..",
+    "ai_seniority": "Senior",
+    "required_skills": [
+      "python",
+      "node.js",
+      "postgresql",
+      "redis",
+      "docker",
+      "kubernetes",
+      "git"
+    ],
+    "raw_text_justification": "5+ years of professional backend engineering experience required",
+    "native_label": null,
+    "is_verified": true,
+    "audit_mismatch": false,
+    "bias_flags": [
+      "rockstar",
+      "ninja"
+    ],
+    "pay_range_present": true,
+    "quality_score": 90,
+    "score_breakdown": [
+      "+20 skills≥3",
+      "+10 skills≥6",
+      "+25 level",
+      "+20 verified",
+      "+15 pay range"
+    ],
+    "content_hash": "778192d4710f56a91817775dc58e4ad20999034e86fe72ce2657b8acf59cc6eb",
+    "status": "ok"
+  }
+]
