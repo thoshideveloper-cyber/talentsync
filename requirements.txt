@@ -1,0 +1,9 @@
+pydantic>=2.0
+google-genai>=1.0
+groq>=0.9
+python-dotenv
+fastapi
+uvicorn[standard]
+python-docx
+python-multipart
+pdfplumber

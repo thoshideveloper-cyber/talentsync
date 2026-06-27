@@ -1,0 +1,16 @@
+[project]
+name = "project"
+version = "0.1.0"
+description = "Project dependencies and metadata"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+    "pydantic",
+    "google-genai",
+    "tenacity",
+    "streamlit",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"

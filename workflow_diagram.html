@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1500">
+<title>TalentSync — Architecture &amp; Decision Map</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: #E2E8F0;
+  padding: 32px;
+  min-width: 1500px;
+  color: #1E293B;
+}
+.page {
+  max-width: 1500px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 20px;
+  padding: 44px 48px 36px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+}
+
+/* ── Header ─────────────────────────────────────── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #E2E8F0;
+}
+.header-left {}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.brand-dot {
+  width: 10px; height: 10px;
+  background: #3B82F6;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px #BFDBFE;
+}
+.header-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.4px;
+}
+.header-sub {
+  font-size: 12px;
+  color: #64748B;
+  margin-top: 3px;
+  letter-spacing: 0.2px;
+}
+.header-right {
+  text-align: right;
+}
+.eval-pills {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+.eval-pill {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #166534;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.header-meta-note {
+  font-size: 10px;
+  color: #94A3B8;
+}
+
+/* ── Pipeline ────────────────────────────────────── */
+.pipeline-wrapper {
+  margin-bottom: 32px;
+}
+.pipeline-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #94A3B8;
+  margin-bottom: 12px;
+}
+.pipeline {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+.arrow-col {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  flex-shrink: 0;
+}
+.arrow-svg {
+  width: 28px;
+  height: 20px;
+}
+.node {
+  flex: 1;
+  min-width: 0;
+}
+.node-card {
+  height: 100%;
+  border-radius: 12px;
+  border: 1.5px solid;
+  padding: 14px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  position: relative;
+}
+.node-step {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+.node-title {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.node-sub {
+  font-size: 10px;
+  color: #64748B;
+  line-height: 1.5;
+}
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.badge {
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+.pain-box {
+  background: #FFF1F2;
+  border: 1px solid #FECDD3;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 9.5px;
+  color: #9F1239;
+  line-height: 1.4;
+}
+.pain-box strong { font-weight: 700; display: block; margin-bottom: 2px; color: #BE123C; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+.fix-box {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 9.5px;
+  color: #14532D;
+  line-height: 1.4;
+}
+.fix-box strong { font-weight: 700; display: block; margin-bottom: 2px; color: #15803D; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Node colour themes */
+.n1 .node-card { background: #EFF6FF; border-color: #93C5FD; }
+.n1 .node-step, .n1 .node-title { color: #1D4ED8; }
+.n2 .node-card { background: #F5F3FF; border-color: #C4B5FD; }
+.n2 .node-step, .n2 .node-title { color: #5B21B6; }
+.n3 .node-card { background: #ECFDF5; border-color: #6EE7B7; }
+.n3 .node-step, .n3 .node-title { color: #065F46; }
+.n4 .node-card { background: #F0FDFA; border-color: #5EEAD4; }
+.n4 .node-step, .n4 .node-title { color: #0F766E; }
+.n5 .node-card { background: #FFFBEB; border-color: #FCD34D; }
+.n5 .node-step, .n5 .node-title { color: #92400E; }
+.n6 .node-card { background: #EEF2FF; border-color: #A5B4FC; }
+.n6 .node-step, .n6 .node-title { color: #3730A3; }
+.n7 .node-card { background: #F8FAFC; border-color: #94A3B8; }
+.n7 .node-step, .n7 .node-title { color: #1E293B; }
+
+/* ── Bottom grid ─────────────────────────────────── */
+.bottom {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.box {
+  border: 1.5px solid #E2E8F0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.box-head {
+  background: #F8FAFC;
+  border-bottom: 1.5px solid #E2E8F0;
+  padding: 11px 16px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.box-head-dot {
+  width: 8px; height: 8px;
+  border-radius: 2px;
+}
+
+/* Score table */
+.score-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.score-table thead th {
+  text-align: left;
+  padding: 8px 14px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #94A3B8;
+  background: #FAFAFA;
+  border-bottom: 1px solid #E2E8F0;
+}
+.score-table tbody td {
+  padding: 9px 14px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+  font-size: 11.5px;
+}
+.score-table tbody tr:last-child td { border-bottom: none; }
+.score-table tbody tr:hover { background: #FAFAFA; }
+.pts {
+  font-size: 18px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.comp-name { font-weight: 700; color: #1E293B; }
+.comp-cond { font-size: 10.5px; color: #64748B; margin-top: 1px; }
+.bar-wrap { width: 80px; height: 6px; background: #F1F5F9; border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; }
+.total-row td { background: #F8FAFC; font-weight: 700; }
+
+/* Rules grid */
+.rules-body { padding: 14px; }
+.rules-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.rule {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.rule-id {
+  font-size: 9px;
+  font-weight: 800;
+  font-family: monospace;
+  color: #fff;
+  background: #3B82F6;
+  border-radius: 4px;
+  padding: 2px 5px;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+.rule-id.green { background: #10B981; }
+.rule-id.purple { background: #8B5CF6; }
+.rule-id.amber { background: #F59E0B; }
+.rule-id.slate { background: #64748B; }
+.rule-text {
+  font-size: 10px;
+  color: #475569;
+  line-height: 1.45;
+}
+
+/* ── Footer ──────────────────────────────────────── */
+.footer {
+  padding-top: 18px;
+  border-top: 1.5px solid #E2E8F0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.stack-section {}
+.stack-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #94A3B8;
+  margin-bottom: 7px;
+}
+.stack-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.sp {
+  background: #0F172A;
+  color: #F8FAFC;
+  border-radius: 5px;
+  padding: 4px 9px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.2px;
+}
+.sp.blue { background: #1D4ED8; }
+.sp.purple { background: #5B21B6; }
+.sp.green { background: #065F46; }
+.sp.amber { background: #92400E; }
+
+.footer-right {
+  text-align: right;
+  font-size: 10px;
+  color: #94A3B8;
+}
+.footer-right strong {
+  display: block;
+  font-size: 11px;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+@media print {
+  body { background: white; padding: 0; }
+  .page { box-shadow: none; border-radius: 0; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── HEADER ─────────────────────────────────── -->
+  <div class="header">
+    <div class="header-left">
+      <div class="brand">
+        <div class="brand-dot"></div>
+        <div class="header-title">TalentSync — End-to-End Architecture &amp; Decision Map</div>
+      </div>
+      <div class="header-sub">JD Intelligence Pipeline &nbsp;·&nbsp; Anti-Hallucination System (R1–R11) &nbsp;·&nbsp; Multi-Provider LLM Fallback &nbsp;·&nbsp; Quality Scoring</div>
+    </div>
+    <div class="header-right">
+      <div class="eval-pills">
+        <span class="eval-pill">93% seniority accuracy</span>
+        <span class="eval-pill">100% verification rate</span>
+        <span class="eval-pill">0 hallucinations post-filter</span>
+        <span class="eval-pill">n = 15 seeds</span>
+      </div>
+      <div class="header-meta-note">Synthetic labeled seed set · eval.py §10 metrics</div>
+    </div>
+  </div>
+
+  <!-- ── PIPELINE ───────────────────────────────── -->
+  <div class="pipeline-wrapper">
+    <div class="pipeline-label">Pipeline flow — process_jd() single shared path (batch + API)</div>
+    <div class="pipeline">
+
+      <!-- Node 1: Input -->
+      <div class="node n1">
+        <div class="node-card">
+          <div class="node-step">01 · Input</div>
+          <div class="node-title">Raw JD</div>
+          <div class="node-sub">paste · email · form<br>any structure, any length</div>
+          <div class="badges">
+            <span class="badge">FastAPI</span>
+            <span class="badge">Pydantic v2</span>
+            <span class="badge">SHA-256 dedup</span>
+          </div>
+          <div class="pain"><strong>Pain</strong>Unstructured manager notes, intake forms, copy-pastes with inline edits</div>
+          <div class="fix-box"><strong>Fix</strong>Any-format text accepted. SHA-256 hash dedup: reprocessing costs 0 LLM calls</div>
+        </div>
+      </div>
+
+      <div class="arrow-col">
+        <svg class="arrow-svg" viewBox="0 0 28 20" fill="none">
+          <path d="M2 10 H22 M16 4 L24 10 L16 16" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <!-- Node 2: LLM Extract -->
+      <div class="node n2">
+        <div class="node-card">
+          <div class="node-step">02 · Extract</div>
+          <div class="node-title">LLM Extraction</div>
+          <div class="node-sub">seniority · skills · quote · summary<br>JSON mode · structured output</div>
+          <div class="badges">
+            <span class="badge">Gemini 2.5 Flash</span>
+            <span class="badge">Groq llama-3.3</span>
+            <span class="badge">temp=0</span>
+            <span class="badge">retry ≤2</span>
+          </div>
+          <div class="pain"><strong>Pain</strong>20 RPD free quota; short quotes ("6+ yrs") fail R2; 503 spikes mid-run</div>
+          <div class="fix-box"><strong>Fix</strong>Round-robin 27 slots: 4 Google keys × 3 models + 5 Groq keys × 3 models. Rotate on 429/503 instantly (2s pause)</div>
+        </div>
+      </div>
+
+      <div class="arrow-col">
+        <svg class="arrow-svg" viewBox="0 0 28 20" fill="none">
+          <path d="M2 10 H22 M16 4 L24 10 L16 16" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <!-- Node 3: Verify -->
+      <div class="node n3">
+        <div class="node-card">
+          <div class="node-step">03 · Verify (R2)</div>
+          <div class="node-title">Quote Gate</div>
+          <div class="node-sub">normalized substring check<br>≥25 chars · casefold · collapse ws</div>
+          <div class="badges">
+            <span class="badge">verify.py</span>
+            <span class="badge">_norm()</span>
+            <span class="badge">R2</span>
+          </div>
+          <div class="pain"><strong>Pain</strong>Gemini returns "6+ yrs" (6 chars) — correct seniority, but unprovable without source anchor</div>
+          <div class="fix-box"><strong>Fix</strong>Hard gate: len ≥ 25 + _norm(quote) in _norm(text). Fail → override ai_seniority = Uncertain</div>
+        </div>
+      </div>
+
+      <div class="arrow-col">
+        <svg class="arrow-svg" viewBox="0 0 28 20" fill="none">
+          <path d="M2 10 H22 M16 4 L24 10 L16 16" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <!-- Node 4: Skill Filter -->
+      <div class="node n4">
+        <div class="node-card">
+          <div class="node-step">04 · Filter (R3)</div>
+          <div class="node-title">Skill Filter</div>
+          <div class="node-sub">word-boundary regex · synonym map<br>canonicalize · cap at 7</div>
+          <div class="badges">
+            <span class="badge">regex (?&lt;![a-z0-9])</span>
+            <span class="badge">SKILL_SYNONYMS</span>
+            <span class="badge">R3</span>
+          </div>
+          <div class="pain"><strong>Pain</strong>"kubernetes" extracted but JD says "k8s" → looks hallucinated, is actually valid synonym</div>
+          <div class="fix-box"><strong>Fix</strong>Canonical synonym map (k8s→kubernetes, reactjs→react). Post-filter hallucination rate = 0 by construction</div>
+        </div>
+      </div>
+
+      <div class="arrow-col">
+        <svg class="arrow-svg" viewBox="0 0 28 20" fill="none">
+          <path d="M2 10 H22 M16 4 L24 10 L16 16" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <!-- Node 5: Enrich -->
+      <div class="node n5">
+        <div class="node-card">
+          <div class="node-step">05 · Enrich (R5)</div>
+          <div class="node-title">Deterministic Enrich</div>
+          <div class="node-sub">bias wordlist · pay regex<br>native_label · ordinal mismatch</div>
+          <div class="badges">
+            <span class="badge">enrich.py</span>
+            <span class="badge">24 bias terms</span>
+            <span class="badge">₹/LPA regex</span>
+          </div>
+          <div class="pain"><strong>Pain</strong>Subjective bias; level inflation invisible in raw text (title says "Senior" but JD says "1-2 yrs")</div>
+          <div class="fix-box"><strong>Fix</strong>Wordlist (rockstar, ninja, hustle…). Mismatch flag: ordinal |stated − ai| ≥ 2 tiers only</div>
+        </div>
+      </div>
+
+      <div class="arrow-col">
+        <svg class="arrow-svg" viewBox="0 0 28 20" fill="none">
+          <path d="M2 10 H22 M16 4 L24 10 L16 16" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <!-- Node 6: Score -->
+      <div class="node n6">
+        <div class="node-card">
+          <div class="node-step">06 · Score</div>
+          <div class="node-title">Quality Score</div>
+          <div class="node-sub">0–100 deterministic<br>6-component breakdown stored</div>
+          <div class="badges">
+            <span class="badge">quality_score()</span>
+            <span class="badge">score_breakdown[]</span>
+          </div>
+          <div class="pain"><strong>Pain</strong>Opaque "good / bad" signal gives HR no actionable path to improve a draft</div>
+          <div class="fix-box"><strong>Fix</strong>Breakdown list per record: +20 skills · +25 level · +20 verified · +15 pay · +10 no-bias · +10 base</div>
+        </div>
+      </div>
+
+      <div class="arrow-col">
+        <svg class="arrow-svg" viewBox="0 0 28 20" fill="none">
+          <path d="M2 10 H22 M16 4 L24 10 L16 16" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <!-- Node 7: Output -->
+      <div class="node n7">
+        <div class="node-card">
+          <div class="node-step">07 · Output</div>
+          <div class="node-title">Multi-Format Output</div>
+          <div class="node-sub">JSON · REST · React SPA<br>.docx download · CSV export</div>
+          <div class="badges">
+            <span class="badge">results.json</span>
+            <span class="badge">FastAPI</span>
+            <span class="badge">React + Vite</span>
+            <span class="badge">python-docx</span>
+            <span class="badge">Tailwind v3</span>
+          </div>
+          <div class="pain"><strong>Pain</strong>Batch pipeline, live API, and file download were three separate diverging paths</div>
+          <div class="fix-box"><strong>Fix</strong>Single process_jd() shared path. 7 REST endpoints. Before/after UI. Corrected .docx per record</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── BOTTOM SECTION ─────────────────────────── -->
+  <div class="bottom">
+
+    <!-- Scoring Guide -->
+    <div class="box">
+      <div class="box-head">
+        <div class="box-head-dot" style="background:#6366F1"></div>
+        Quality Scoring Rubric — 0 to 100 (deterministic, no LLM)
+      </div>
+      <table class="score-table">
+        <thead>
+          <tr>
+            <th style="width:32px">#</th>
+            <th>Component</th>
+            <th style="width:56px">Points</th>
+            <th>Trigger Condition</th>
+            <th style="width:90px">Weight</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:#94A3B8;font-size:10px;font-weight:700">1</td>
+            <td><div class="comp-name">Seniority Level</div><div class="comp-cond">Not Uncertain → quote passed R2 gate</div></td>
+            <td><span class="pts" style="color:#5B21B6">+25</span></td>
+            <td style="font-size:10.5px;color:#64748B"><code style="background:#F5F3FF;padding:1px 4px;border-radius:3px;font-size:9.5px">ai_seniority != "Uncertain"</code></td>
+            <td><div class="bar-wrap"><div class="bar-fill" style="width:100%;background:#8B5CF6"></div></div></td>
+          </tr>
+          <tr>
+            <td style="color:#94A3B8;font-size:10px;font-weight:700">2</td>
+            <td><div class="comp-name">Skills Extracted</div><div class="comp-cond">At least 3 skills passed R3 word-boundary filter</div></td>
+            <td><span class="pts" style="color:#1D4ED8">+20</span></td>
+            <td style="font-size:10.5px;color:#64748B"><code style="background:#EFF6FF;padding:1px 4px;border-radius:3px;font-size:9.5px">len(required_skills) >= 3</code></td>
+            <td><div class="bar-wrap"><div class="bar-fill" style="width:80%;background:#3B82F6"></div></div></td>
+          </tr>
+          <tr>
+            <td style="color:#94A3B8;font-size:10px;font-weight:700">3</td>
+            <td><div class="comp-name">Quote Verified</div><div class="comp-cond">Grounding quote ≥25 chars, found in source text</div></td>
+            <td><span class="pts" style="color:#065F46">+20</span></td>
+            <td style="font-size:10.5px;color:#64748B"><code style="background:#ECFDF5;padding:1px 4px;border-radius:3px;font-size:9.5px">is_verified == True</code></td>
+            <td><div class="bar-wrap"><div class="bar-fill" style="width:80%;background:#10B981"></div></div></td>
+          </tr>
+          <tr>
+            <td style="color:#94A3B8;font-size:10px;font-weight:700">4</td>
+            <td><div class="comp-name">Pay Range Present</div><div class="comp-cond">₹ / LPA / lakh / numeric range detected in text</div></td>
+            <td><span class="pts" style="color:#92400E">+15</span></td>
+            <td style="font-size:10.5px;color:#64748B"><code style="background:#FFFBEB;padding:1px 4px;border-radius:3px;font-size:9.5px">pay_range_present == True</code></td>
+            <td><div class="bar-wrap"><div class="bar-fill" style="width:60%;background:#F59E0B"></div></div></td>
+          </tr>
+          <tr>
+            <td style="color:#94A3B8;font-size:10px;font-weight:700">5</td>
+            <td><div class="comp-name">No Bias Language</div><div class="comp-cond">Zero wordlist matches (rockstar, ninja, hustle…)</div></td>
+            <td><span class="pts" style="color:#3730A3">+10</span></td>
+            <td style="font-size:10.5px;color:#64748B"><code style="background:#EEF2FF;padding:1px 4px;border-radius:3px;font-size:9.5px">len(bias_flags) == 0</code></td>
+            <td><div class="bar-wrap"><div class="bar-fill" style="width:40%;background:#6366F1"></div></div></td>
+          </tr>
+          <tr>
+            <td style="color:#94A3B8;font-size:10px;font-weight:700">6</td>
+            <td><div class="comp-name">Base Score</div><div class="comp-cond">Awarded to every successfully processed record</div></td>
+            <td><span class="pts" style="color:#334155">+10</span></td>
+            <td style="font-size:10.5px;color:#64748B"><code style="background:#F8FAFC;padding:1px 4px;border-radius:3px;font-size:9.5px">status != "failed"</code></td>
+            <td><div class="bar-wrap"><div class="bar-fill" style="width:40%;background:#64748B"></div></div></td>
+          </tr>
+          <tr class="total-row">
+            <td></td>
+            <td style="font-size:11px;color:#475569">Max achievable — all conditions met</td>
+            <td><span class="pts" style="color:#0F172A">100</span></td>
+            <td style="font-size:10px;color:#64748B">Verified + level known + 3+ skills + pay + no bias</td>
+            <td><div class="bar-wrap"><div class="bar-fill" style="width:100%;background:#0F172A"></div></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Anti-hallucination rules -->
+    <div class="box">
+      <div class="box-head">
+        <div class="box-head-dot" style="background:#EF4444"></div>
+        Anti-Hallucination Rules — R1 to R11 (enforced in code, not in prompts)
+      </div>
+      <div class="rules-body">
+        <div class="rules-grid">
+          <div class="rule">
+            <span class="rule-id green">R1</span>
+            <span class="rule-text">Grounding quote always visible in UI for every seniority call (Board detail panel)</span>
+          </div>
+          <div class="rule">
+            <span class="rule-id">R2</span>
+            <span class="rule-text">Quote gate: ≥25 chars + <code>_norm(quote) in _norm(text)</code>. Fail → Uncertain override</span>
+          </div>
+          <div class="rule">
+            <span class="rule-id green">R3</span>
+            <span class="rule-text">Word-boundary skill filter: <code>(?&lt;![a-z0-9])term(?![a-z0-9])</code> + synonym canonical map</span>
+          </div>
+          <div class="rule">
+            <span class="rule-id purple">R4</span>
+            <span class="rule-text">UNCERTAIN returned when signals absent — no "infer closest tier" fallback in prompt</span>
+          </div>
+          <div class="rule">
+            <span class="rule-id amber">R5</span>
+            <span class="rule-text">Deterministic enrichment (bias, pay, mismatch): 0 LLM calls, purely rule-based</span>
+          </div>
+          <div class="rule">
+            <span class="rule-id purple">R6</span>
+            <span class="rule-text"><code>temperature=0</code> for all LLM calls — reproducible, consistent outputs</span>
+          </div>
+          <div class="rule">
+            <span class="rule-id">R7</span>
+            <span class="rule-text">JSON-mode response (<code>response_mime_type=application/json</code>); Pydantic v2 schema enforcement</span>
+          </div>
+          <div class="rule">
+            <span class="rule-id amber">R8</span>
+            <span class="rule-text">Retry ≤2 per slot. Rotate key/model on quota; don't retry wrong answers</span>
+          </div>
+          <div class="rule">
+            <span class="rule-id slate">R9</span>
+            <span class="rule-text">Hallucination rate reported pre-filter AND post-filter in eval.py (honest accounting)</span>
+          </div>
+          <div class="rule">
+            <span class="rule-id green">R10</span>
+            <span class="rule-text">Grounding receipt always rendered in Board detail — user can see the exact source text</span>
+          </div>
+          <div class="rule" style="grid-column: 1 / -1;">
+            <span class="rule-id amber">R11</span>
+            <span class="rule-text"><code>one_line_summary</code> labeled <strong>"indicative, not verified"</strong> everywhere it appears — dashed amber border in UI, footer disclaimer, CSV note. Never presented as ground truth.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── FOOTER ─────────────────────────────────── -->
+  <div class="footer">
+    <div class="stack-section">
+      <div class="stack-label">Full Technology Stack</div>
+      <div class="stack-pills">
+        <span class="sp">Python 3.11</span>
+        <span class="sp blue">FastAPI</span>
+        <span class="sp blue">Pydantic v2</span>
+        <span class="sp purple">Gemini 2.5 Flash</span>
+        <span class="sp purple">Groq llama-3.3</span>
+        <span class="sp purple">google-genai</span>
+        <span class="sp purple">groq SDK</span>
+        <span class="sp amber">python-docx</span>
+        <span class="sp green">React 18</span>
+        <span class="sp green">Vite + TS</span>
+        <span class="sp green">Tailwind v3</span>
+        <span class="sp">results.json</span>
+        <span class="sp">SHA-256</span>
+        <span class="sp">round-robin 27 slots</span>
+      </div>
+    </div>
+    <div class="footer-right">
+      <strong>Eval — 15 labeled synthetic seeds</strong>
+      <div>Seniority accuracy: 93% (14/15) &nbsp;·&nbsp; Skill precision: 86.8% &nbsp;·&nbsp; Recall: 58.3%</div>
+      <div style="margin-top:2px">Verification rate: 100% &nbsp;·&nbsp; Post-filter hallucination: 0 of 33 skills</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
