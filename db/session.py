@@ -21,15 +21,22 @@ DATABASE_URL = os.environ.get(
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
 if IS_SQLITE:
-    # SQLite's default pool doesn't accept pool_size/max_overflow.
     engine = create_async_engine(DATABASE_URL, echo=False)
 else:
+    # asyncpg doesn't accept ssl/sslmode as URL params — pass via connect_args
+    _connect_args: dict = {}
+    _clean_url = DATABASE_URL
+    for _param in ("ssl=require", "ssl=prefer", "sslmode=require", "sslmode=prefer"):
+        if _param in _clean_url:
+            _clean_url = _clean_url.replace(f"?{_param}", "").replace(f"&{_param}", "")
+            _connect_args["ssl"] = "require"
     engine = create_async_engine(
-        DATABASE_URL,
+        _clean_url,
         echo=False,
         pool_pre_ping=True,
         pool_size=10,
         max_overflow=20,
+        connect_args=_connect_args,
     )
 
 AsyncSessionLocal = async_sessionmaker(

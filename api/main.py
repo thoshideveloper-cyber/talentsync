@@ -135,9 +135,12 @@ async def lifespan(app: FastAPI):
         await db.commit()
 
     # ── LangGraph checkpointer (owned here, never per-request) ───────────────
-    _db_url_sync = os.environ.get(
-        "DATABASE_URL", "postgresql+asyncpg://postgres@localhost:5432/talentsync"
-    ).replace("postgresql+asyncpg://", "postgresql://")
+    _db_url_sync = (
+        os.environ.get("DATABASE_URL", "postgresql+asyncpg://postgres@localhost:5432/talentsync")
+        .replace("postgresql+asyncpg://", "postgresql://")
+        .replace("?ssl=require", "?sslmode=require")
+        .replace("&ssl=require", "&sslmode=require")
+    )
 
     saver_cm = None
     try:
