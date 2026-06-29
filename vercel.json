@@ -4,8 +4,5 @@
       "source": "/api/:path*",
       "destination": "https://talentsync-api-n81x.onrender.com/:path*"
     }
-  ],
-  "buildCommand": "cd web && npm install && npm run build",
-  "outputDirectory": "web/dist",
-  "installCommand": "cd web && npm install"
+  ]
 }
