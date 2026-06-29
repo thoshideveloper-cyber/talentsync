@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: talentsync-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY_2
+        sync: false
+      - key: GOOGLE_API_KEY_3
+        sync: false
+      - key: GOOGLE_API_KEY_4
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: HR_EMAIL
+        sync: false
+      - key: HR_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
