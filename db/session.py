@@ -23,19 +23,21 @@ IS_SQLITE = DATABASE_URL.startswith("sqlite")
 if IS_SQLITE:
     engine = create_async_engine(DATABASE_URL, echo=False)
 else:
-    # asyncpg doesn't accept ssl/sslmode as URL params — pass via connect_args
+    import ssl as _ssl_mod
+    # asyncpg doesn't accept ssl/sslmode as URL params — strip them and pass ssl context
     _connect_args: dict = {}
     _clean_url = DATABASE_URL
-    for _param in ("ssl=require", "ssl=prefer", "sslmode=require", "sslmode=prefer"):
+    for _param in ("ssl=require", "ssl=true", "ssl=prefer", "sslmode=require", "sslmode=prefer"):
         if _param in _clean_url:
             _clean_url = _clean_url.replace(f"?{_param}", "").replace(f"&{_param}", "")
-            _connect_args["ssl"] = "require"
+            _ssl_ctx = _ssl_mod.create_default_context()
+            _connect_args["ssl"] = _ssl_ctx
     engine = create_async_engine(
         _clean_url,
         echo=False,
         pool_pre_ping=True,
-        pool_size=10,
-        max_overflow=20,
+        pool_size=5,
+        max_overflow=10,
         connect_args=_connect_args,
     )
 
