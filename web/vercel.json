@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://talentsync-api-n81x.onrender.com/api/:path*"
+    }
+  ]
+}
