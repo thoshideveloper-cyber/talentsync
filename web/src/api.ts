@@ -368,12 +368,18 @@ export const api = {
   },
 
   // Authenticated downloads (Bearer token can't ride on a bare href / window.open)
-  downloadDocx: (id: string, versionId?: string) =>
-    download(
+  downloadDocx: (id: string, versionId?: string, role?: string) => {
+    const slug = role ? role.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') : id.slice(0, 8)
+    const suffix = versionId ? 'original' : 'compliant'
+    return download(
       `/records/${id}/docx${versionId ? `?version_id=${encodeURIComponent(versionId)}` : ''}`,
-      `${id}_corrected.docx`,
-    ),
-  downloadAuditReport: (id: string) => download(`/records/${id}/audit-report`, `${id}_audit_report.docx`),
+      `${slug}_jd_${suffix}.docx`,
+    )
+  },
+  downloadAuditReport: (id: string, role?: string) => {
+    const slug = role ? role.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') : id.slice(0, 8)
+    return download(`/records/${id}/audit-report`, `${slug}_audit_report.docx`)
+  },
   downloadCsv: () => download('/export.csv', 'talentsync_export.csv'),
 
   extractDocx: async (text: string): Promise<Blob> => {

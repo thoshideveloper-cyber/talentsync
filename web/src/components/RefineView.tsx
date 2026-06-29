@@ -2,6 +2,81 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import type { RefineRun, RefineStep } from '../api'
 
+function ScanDropdown({ step }: { step: RefineStep }) {
+  const [open, setOpen] = useState(false)
+  const out = step.output_ref ?? {}
+  const verdict = typeof out.gate_verdict === 'string' ? out.gate_verdict : null
+  const findings = typeof out.findings_count === 'number' ? out.findings_count : null
+  const issues: unknown[] = Array.isArray(out.issues) ? out.issues : Array.isArray(out.findings) ? out.findings : []
+  const summary = typeof out.summary === 'string' ? out.summary : null
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-muted/40 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-foreground">{step.node_name.replace(/_/g, ' ')}</span>
+          {verdict && (
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+              verdict === 'pass' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+            }`}>
+              {verdict === 'pass' ? 'Pass' : 'Issues found'}
+            </span>
+          )}
+          {findings !== null && (
+            <span className="text-muted-foreground">{findings} finding{findings !== 1 ? 's' : ''}</span>
+          )}
+        </div>
+        <svg
+          className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="border-t border-border px-3 py-3 space-y-2 bg-background">
+          {summary && (
+            <p className="text-xs text-muted-foreground">{summary}</p>
+          )}
+          {issues.length > 0 ? (
+            <ul className="space-y-1">
+              {(issues as Record<string, unknown>[]).map((issue, i) => {
+                const msg = typeof issue === 'string' ? issue
+                  : typeof issue.message === 'string' ? issue.message
+                  : typeof issue.description === 'string' ? issue.description
+                  : typeof issue.text === 'string' ? issue.text
+                  : JSON.stringify(issue)
+                const tier = typeof issue.tier === 'string' ? issue.tier : null
+                return (
+                  <li key={i} className="flex items-start gap-2 text-xs">
+                    <span className={`mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full ${
+                      tier === 'critical' ? 'bg-red-500' : tier === 'warning' ? 'bg-amber-500' : 'bg-blue-400'
+                    }`} />
+                    <span className="text-foreground">{msg}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              {verdict === 'pass' ? 'No issues detected — JD is compliant.' : 'No detailed findings available.'}
+            </p>
+          )}
+          {step.ts && (
+            <p className="text-[10px] text-muted-foreground pt-1">
+              Scanned at {new Date(step.ts).toLocaleTimeString()}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface Props {
   recordId: string
   roleName?: string
@@ -231,7 +306,7 @@ export function RefineView({ recordId, roleName, onRefined }: Props) {
               {run.new_version_id && (
                 <div className="flex gap-2 pl-6">
                   <button
-                    onClick={() => api.downloadDocx(recordId).catch(e =>
+                    onClick={() => api.downloadDocx(recordId, undefined, roleName).catch(e =>
                       setError(e instanceof Error ? e.message : 'Download failed'))}
                     className="text-xs font-semibold text-emerald-700 hover:underline"
                   >
@@ -239,7 +314,7 @@ export function RefineView({ recordId, roleName, onRefined }: Props) {
                   </button>
                   <span className="text-emerald-400">·</span>
                   <button
-                    onClick={() => api.downloadAuditReport(recordId).catch(e =>
+                    onClick={() => api.downloadAuditReport(recordId, roleName).catch(e =>
                       setError(e instanceof Error ? e.message : 'Download failed'))}
                     className="text-xs font-semibold text-emerald-700 hover:underline"
                   >
@@ -262,26 +337,31 @@ export function RefineView({ recordId, roleName, onRefined }: Props) {
       )}
 
       {steps.length > 0 && (
-        <div>
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-            Transformations Applied
+        <div className="space-y-3">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Scan &amp; Transformations
           </h4>
-          <div className="space-y-1">
-            {steps.map(step => (
-              <div key={step.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${
-                  step.status === 'ok' ? 'bg-green-500' :
-                  step.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-                }`} />
-                <span className="font-medium text-foreground">{step.node_name}</span>
-                <span>·</span>
-                <span>{step.status}</span>
-                {step.ts && (
-                  <span className="ml-auto">{new Date(step.ts).toLocaleTimeString()}</span>
-                )}
-              </div>
-            ))}
-          </div>
+          {/* First step (initial scan) shown as an expandable dropdown */}
+          {steps[0].output_ref && <ScanDropdown step={steps[0]} />}
+          {/* Remaining steps as a compact list */}
+          {steps.slice(1).length > 0 && (
+            <div className="space-y-1">
+              {steps.slice(1).map(step => (
+                <div key={step.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${
+                    step.status === 'ok' ? 'bg-green-500' :
+                    step.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+                  }`} />
+                  <span className="font-medium text-foreground">{step.node_name.replace(/_/g, ' ')}</span>
+                  <span>·</span>
+                  <span>{step.status}</span>
+                  {step.ts && (
+                    <span className="ml-auto">{new Date(step.ts).toLocaleTimeString()}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
