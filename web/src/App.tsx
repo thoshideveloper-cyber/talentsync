@@ -193,7 +193,7 @@ export default function App() {
             )}
 
             {tab === 'insights' && (
-              <InsightsView records={records} skills={skills} onCloned={() => void load()} />
+              <InsightsView records={records} skills={skills} onUseTemplate={(id) => { void focusJob(id, records); setTab('workspace') }} />
             )}
           </>
         )}
