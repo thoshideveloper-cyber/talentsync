@@ -1,0 +1,32 @@
+AI Infrastructure Engineer – Model Serving
+Company: DeepServe Systems
+Location: Hyderabad (On-site only, no remote)
+
+About the Role
+DeepServe Systems runs high-throughput inference infrastructure for real-time AI applications.
+We need a hands-on AI Infrastructure Engineer who can keep GPU clusters healthy, optimise
+serving latency, and ensure our models remain available at four-nines uptime.
+
+Requirements
+- 3–6 years of experience in ML infrastructure, MLOps, or platform engineering
+- Physically fit and able-bodied; the role involves periodic hardware maintenance in our
+  on-premise GPU data centre and the company cannot accommodate persons with physical
+  disabilities at this facility
+- Must not be pregnant or planning maternity leave within the next 18 months; project
+  continuity is critical and unplanned absences cannot be accommodated in this team
+- Proficiency in Python and Go for tooling and automation
+- Experience with Kubernetes, Helm, and containerised GPU workloads (NVIDIA Docker)
+- Hands-on with at least one inference server: Triton, vLLM, or TGI
+- Strong observability skills: Prometheus, Grafana, and distributed tracing
+- Familiarity with CUDA profiling tools (Nsight, nvprof)
+
+Responsibilities
+- Own the model deployment pipeline from staging to production
+- Tune batching strategies and quantisation settings for latency / throughput trade-offs
+- Set up autoscaling policies and cost guardrails for GPU node pools
+- Respond to on-call incidents, conduct post-mortems, and drive reliability improvements
+- Evaluate new serving frameworks and present findings to the engineering leadership
+
+Compensation
+Salary is competitive and will be discussed only after the technical assessment. No CTC
+information will be shared upfront.

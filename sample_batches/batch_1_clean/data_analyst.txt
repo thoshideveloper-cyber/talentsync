@@ -1,0 +1,31 @@
+Data Analyst — Growth & Insights
+Company: TalentSync Technologies
+Location: Mumbai (Remote-friendly)
+Salary: ₹12–18 LPA
+
+About the Role
+Join our analytics team to turn raw data into business decisions. You will own dashboards, run ad-hoc analyses, and partner with marketing, product, and finance.
+
+Responsibilities
+- Build and maintain dashboards in Metabase and Tableau
+- Write clean, efficient SQL queries against our data warehouse
+- Identify trends and deliver weekly insight reports to leadership
+- Partner with engineers to instrument new product features
+
+Requirements
+- 2–4 years of experience in a data analyst or BI role
+- Proficient in SQL and Python (pandas, matplotlib)
+- Experience with at least one BI tool (Tableau, Metabase, Looker)
+- Strong communication skills — able to explain data to non-technical stakeholders
+
+Nice to Have
+- Experience with dbt or Airflow
+- Familiarity with A/B testing methodology
+
+Compensation & Benefits
+- Salary: ₹12–18 LPA
+- Flexible remote working policy
+- Health insurance (employee + spouse + children)
+- 20 days paid leave
+
+We are an equal opportunity employer committed to diversity and inclusion at every level of our organisation.

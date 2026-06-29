@@ -3,6 +3,7 @@ core.process_jd — the SINGLE shared path used by both the batch pipeline and t
 Implements the §7 post-processing pipeline in order.
 """
 import hashlib
+import re
 from typing import Any
 
 from .contracts import SeniorityTier
@@ -62,6 +63,61 @@ def _native_label_from_seed(seed: dict) -> str | None:
     return None
 
 
+# Word-boundary title-level patterns, senior-first so the highest stated level wins
+# (e.g. "Associate Director" -> Executive). Used on the PASTE path, which has no seed/
+# dropdown label — without this, audit_mismatch silently never fires on the main
+# workflow (paste runs with seed={} -> native_label=None -> mismatch always False).
+_TITLE_LEVEL_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"\b(head\s+of|vp|vice\s+president|director|chief|c(?:to|eo|oo|fo|xo)|executive|president)\b", re.IGNORECASE), "Executive"),
+    (re.compile(r"\b(senior|sr\.?|lead|principal|staff)\b", re.IGNORECASE), "Senior"),
+    (re.compile(r"\b(mid[\s-]?level|mid[\s-]?senior)\b", re.IGNORECASE), "Mid-Level"),
+    (re.compile(r"\b(fresher|entry[\s-]?level|graduate\s+trainee|trainee|junior|jr\.?|associate)\b", re.IGNORECASE), "Entry-Level"),
+    (re.compile(r"\b(intern|internship)\b", re.IGNORECASE), "Internship"),
+]
+
+
+_TITLE_PREFIX_RE = re.compile(
+    r"^(?:job\s+title|position|role|designation|vacancy|opening|title)\s*[:\-–]\s*",
+    re.IGNORECASE,
+)
+_NOISE_SUFFIXES_RE = re.compile(
+    r"\s*[\|·•]\s*.{0,60}$",  # strip "| Company Name" or "• Location" from title line
+)
+
+def role_title_from_text(text: str) -> str:
+    """Extract a clean job title from the first meaningful line of a pasted JD.
+    Falls back to 'Pasted JD' if nothing sensible is found."""
+    for line in text.splitlines():
+        candidate = line.strip()
+        if not candidate or len(candidate) < 3:
+            continue
+        # Skip lines that are obviously headers/labels, not a title
+        if re.match(r"^(company|location|department|about|overview|summary|responsibilities)\s*[:\-]", candidate, re.IGNORECASE):
+            continue
+        # Strip "Job Title: " prefixes
+        candidate = _TITLE_PREFIX_RE.sub("", candidate)
+        # Strip trailing " | Company Name" or " • Location" suffixes
+        candidate = _NOISE_SUFFIXES_RE.sub("", candidate).strip()
+        # Accept if it looks like a title: reasonable length, not a sentence
+        if 3 < len(candidate) <= 120 and candidate.count(" ") <= 10:
+            return candidate[:100]
+    return "Pasted JD"
+
+
+def _native_label_from_title(text: str) -> str | None:
+    """Derive the stated seniority from the JD title (first non-empty line).
+    Pasted JDs carry no native dropdown label, so this is what lets audit_mismatch
+    fire on the real user workflow. Conservative by design: the ≥2-tier gap rule in
+    _audit_mismatch still guards against minor title-parsing imprecision."""
+    title = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")
+    if not title:
+        return None
+    for pat, level in _TITLE_LEVEL_PATTERNS:
+        if pat.search(title):
+            return level
+    return None
+
+
 def process_jd(text: str, seed: dict | None = None) -> dict[str, Any]:
     """
     Full pipeline: extract → enrich → verify → score.
@@ -72,6 +128,10 @@ def process_jd(text: str, seed: dict | None = None) -> dict[str, Any]:
     role = seed.get("role", "Pasted JD")
     input_format = seed.get("input_format", "paste")
     content_hash = _sha256(text)
+
+    # Seed-derived label wins (synthetic pipeline); fall back to the JD title so the
+    # paste path also gets a stated level and audit_mismatch can actually fire.
+    native_label = _native_label_from_seed(seed) or _native_label_from_title(text)
 
     # ── Step 1: LLM extraction (with retry ≤2, per R8) ──────────────────────
     extraction = extract(text)
@@ -86,7 +146,7 @@ def process_jd(text: str, seed: dict | None = None) -> dict[str, Any]:
             "ai_seniority": "Uncertain",
             "required_skills": [],
             "raw_text_justification": "",
-            "native_label": _native_label_from_seed(seed),
+            "native_label": native_label,
             "is_verified": False,
             "audit_mismatch": False,
             "bias_flags": detect_bias(text),
@@ -121,8 +181,7 @@ def process_jd(text: str, seed: dict | None = None) -> dict[str, Any]:
     bias_flags = detect_bias(text)
     pay_range_present = detect_pay(text)
 
-    # ── Step 6: native_label + audit_mismatch (§5.5) ─────────────────────────
-    native_label = _native_label_from_seed(seed)
+    # ── Step 6: audit_mismatch (§5.5) — native_label computed above ──────────
     mismatch = _audit_mismatch(native_label, ai_seniority)
 
     # ── Step 7: quality score + content_hash ─────────────────────────────────

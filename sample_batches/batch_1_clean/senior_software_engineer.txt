@@ -1,0 +1,32 @@
+Senior Software Engineer — Backend
+Company: TalentSync Technologies
+Location: Bengaluru (Hybrid — 3 days office)
+Salary: ₹25–40 LPA
+
+About the Role
+We are looking for a Senior Software Engineer to join our backend platform team. You will design and own core services that power our data pipeline and API layer.
+
+Responsibilities
+- Design, build, and maintain scalable Python microservices on AWS
+- Lead code reviews and mentor junior engineers
+- Collaborate with product and data teams to define technical requirements
+- Ensure 99.9% uptime through observability and on-call practices
+
+Requirements
+- 5+ years of professional software engineering experience
+- Strong Python (FastAPI, SQLAlchemy) and PostgreSQL skills
+- Hands-on AWS experience (ECS, RDS, S3, Lambda)
+- Excellent written and verbal communication
+
+Nice to Have
+- Experience with LangChain or LLM-based product development
+- Familiarity with Kafka or event-driven architecture
+
+Compensation & Benefits
+- Salary range: ₹25–40 LPA (based on experience)
+- Annual performance bonus
+- Health insurance (employee + family)
+- 25 days paid leave + public holidays
+- Learning & development budget: ₹50,000/year
+
+TalentSync is an equal opportunity employer. We welcome candidates of all genders, backgrounds, ages, and abilities. We are committed to building an inclusive team.

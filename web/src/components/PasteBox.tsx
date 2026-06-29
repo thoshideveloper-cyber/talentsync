@@ -72,10 +72,13 @@ export function PasteBox({ onProcessed }: Props) {
         {text && (
           <button
             onClick={() => { setText(''); setResult(null); setError(null) }}
-            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground text-xs"
+            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
             title="Clear"
+            aria-label="Clear"
           >
-            ✕
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         )}
       </div>

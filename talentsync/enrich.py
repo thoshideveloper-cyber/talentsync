@@ -17,6 +17,19 @@ _BIAS_TERMS = [
     "energetic", "dynamic personality",
 ]
 
+# Word-boundary patterns so substrings don't false-positive: "guru" must not match
+# "Gurugram", "ninja"/"hero" must not match inside larger tokens, etc.
+# NOTE: a literal company name like "Hero" (Hero MotoCorp) is a *true* word match and
+# will still flag — distinguishing it needs context-aware detection, tracked for the
+# corpus-backed detector rework. Word boundaries fix the substring class only.
+_BIAS_PATTERNS = [
+    (term, re.compile(r"\b" + re.escape(term) + r"\b", re.IGNORECASE))
+    for term in _BIAS_TERMS
+]
+
+# Public alias used by talentsync.compliance for inclusive-language findings with spans.
+BIAS_PATTERNS: list[tuple[str, re.Pattern]] = _BIAS_PATTERNS
+
 # ── Pay regex ────────────────────────────────────────────────────────────────
 # Matches ₹/LPA/lakh + numeric range patterns common in India JDs.
 _PAY_RE = re.compile(
@@ -145,8 +158,7 @@ def quality_score(
 # ── Public helpers ─────────────────────────────────────────────────────────────
 
 def detect_bias(text: str) -> List[str]:
-    text_lower = text.lower()
-    return [term for term in _BIAS_TERMS if term in text_lower]
+    return [term for term, pat in _BIAS_PATTERNS if pat.search(text)]
 
 
 def detect_pay(text: str) -> bool:

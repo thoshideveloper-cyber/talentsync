@@ -1,0 +1,32 @@
+UX Designer — Product Design
+Company: DesignMatter Studio
+Location: Bengaluru (Remote-first)
+Salary: ₹15–22 LPA
+
+About the Role
+We are hiring a UX Designer to own the design system and drive user experience across our B2B SaaS product. You will work closely with product and engineering to ship thoughtful, accessible interfaces.
+
+Responsibilities
+- Lead end-to-end UX for new features — research, wireframes, prototypes, handoff
+- Maintain and evolve the design system in Figma
+- Run usability tests and synthesise feedback
+- Advocate for accessibility (WCAG 2.1 AA compliance)
+
+Requirements
+- 3–5 years of UX/product design experience
+- Proficient in Figma; comfortable with interaction prototyping
+- Experience conducting user research and usability testing
+- Portfolio demonstrating shipped B2B or SaaS product work
+
+Nice to Have
+- Experience designing for data-heavy dashboards
+- Basic front-end skills (HTML/CSS) for better developer collaboration
+
+Compensation & Benefits
+- Salary: ₹15–22 LPA
+- Fully remote with quarterly team offsites
+- Health insurance (employee + dependants)
+- 25 days paid leave
+- Annual design tools & conference budget
+
+DesignMatter is committed to building a diverse and inclusive team. We encourage applications from all backgrounds.
