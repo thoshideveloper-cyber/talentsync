@@ -316,7 +316,7 @@ export function Workspace({ records, onChanged }: Props) {
                   <BeforeAfter
                     rawText={phase1Text}
                     record={focused}
-                    onDownload={() => void api.downloadDocx(focused.id, phase1VerId).catch(e => console.error('Download failed', e))}
+                    onDownload={() => void api.downloadDocx(focused.id, phase1VerId, focused.role).catch(e => console.error('Download failed', e))}
                     onCopy={() => navigator.clipboard.writeText(phase1Text)}
                   />
                 </div>
@@ -468,7 +468,7 @@ export function Workspace({ records, onChanged }: Props) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => void api.downloadDocx(focused.id).catch(e => console.error('Download failed', e))}
+                  onClick={() => void api.downloadDocx(focused.id, undefined, focused.role).catch(e => console.error('Download failed', e))}
                   className="flex items-center gap-4 rounded-xl border border-emerald-200 bg-white px-5 py-4 text-left w-full
                              hover:border-emerald-400 hover:bg-emerald-50 transition-colors group"
                 >
@@ -490,7 +490,7 @@ export function Workspace({ records, onChanged }: Props) {
               {/* Phase 1 / Original JD */}
               <button
                 type="button"
-                onClick={() => void api.downloadDocx(focused.id, phase1VerId).catch(e => console.error('Download failed', e))}
+                onClick={() => void api.downloadDocx(focused.id, phase1VerId, focused.role).catch(e => console.error('Download failed', e))}
                 className="flex items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 text-left w-full
                            hover:border-primary/40 hover:bg-muted/30 transition-colors group"
               >
@@ -513,7 +513,7 @@ export function Workspace({ records, onChanged }: Props) {
               {/* Audit Report */}
               <button
                 type="button"
-                onClick={() => void api.downloadAuditReport(focused.id).catch(e => console.error('Download failed', e))}
+                onClick={() => void api.downloadAuditReport(focused.id, focused.role).catch(e => console.error('Download failed', e))}
                 className="flex items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 text-left w-full
                            hover:border-primary/40 hover:bg-muted/30 transition-colors group"
               >
