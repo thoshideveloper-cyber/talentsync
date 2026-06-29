@@ -6,7 +6,7 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
-from sqlalchemy import pool
+from sqlalchemy import create_engine, pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
@@ -61,7 +61,17 @@ async def run_async_migrations() -> None:
 
 
 def run_migrations_online() -> None:
-    asyncio.run(run_async_migrations())
+    # On Windows use sync psycopg2 driver to avoid asyncio DNS issues
+    if sys.platform == "win32":
+        url = config.get_main_option("sqlalchemy.url", "")
+        sync_url = url.replace("postgresql+asyncpg://", "postgresql+psycopg2://").replace("+asyncpg://", "+psycopg2://")
+        engine = create_engine(sync_url, poolclass=pool.NullPool)
+        with engine.connect() as connection:
+            do_run_migrations(connection)
+            connection.commit()
+        engine.dispose()
+    else:
+        asyncio.run(run_async_migrations())
 
 
 if context.is_offline_mode():
