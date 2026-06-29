@@ -89,50 +89,58 @@ async def lifespan(app: FastAPI):
             print(f"[startup] WARNING: Alembic upgrade failed ({exc}). Continuing anyway.")
 
     # ── DB check + seed ───────────────────────────────────────────────────────
-    async with AsyncSessionLocal() as db:
-        await db.execute(text("SELECT 1"))
+    print("[startup] Connecting to database...", flush=True)
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+            print("[startup] DB connection OK", flush=True)
 
-        admin_email = os.environ.get("ADMIN_EMAIL", "admin@talentsync.local")
-        admin_pass = os.environ.get("ADMIN_PASSWORD", "changeme123")
+            admin_email = os.environ.get("ADMIN_EMAIL", "admin@talentsync.local")
+            admin_pass = os.environ.get("ADMIN_PASSWORD", "changeme123")
 
-        admin_r = await db.execute(select(User).where(User.email == admin_email))
-        admin = admin_r.scalar_one_or_none()
-        if admin is None:
-            admin = User(
-                email=admin_email,
-                hashed_password=hash_password(admin_pass),
-                role=UserRole.ADMIN,
-                tenant_id="default",
-            )
-            db.add(admin)
-            await db.flush()
-            print(f"[startup] Seeded admin user: {admin_email}")
+            admin_r = await db.execute(select(User).where(User.email == admin_email))
+            admin = admin_r.scalar_one_or_none()
+            if admin is None:
+                admin = User(
+                    email=admin_email,
+                    hashed_password=hash_password(admin_pass),
+                    role=UserRole.ADMIN,
+                    tenant_id="default",
+                )
+                db.add(admin)
+                await db.flush()
+                print(f"[startup] Seeded admin user: {admin_email}", flush=True)
 
-        hr_email = os.environ.get("HR_EMAIL", "hr@talentsync.local")
-        hr_pass = os.environ.get("HR_PASSWORD", "hr123456")
-        hr_r = await db.execute(select(User).where(User.email == hr_email))
-        if hr_r.scalar_one_or_none() is None:
-            db.add(User(
-                email=hr_email,
-                hashed_password=hash_password(hr_pass),
-                role=UserRole.RECRUITER,
-                tenant_id="default",
-            ))
-            print(f"[startup] Seeded HR recruiter: {hr_email}")
+            hr_email = os.environ.get("HR_EMAIL", "hr@talentsync.local")
+            hr_pass = os.environ.get("HR_PASSWORD", "hr123456")
+            hr_r = await db.execute(select(User).where(User.email == hr_email))
+            if hr_r.scalar_one_or_none() is None:
+                db.add(User(
+                    email=hr_email,
+                    hashed_password=hash_password(hr_pass),
+                    role=UserRole.RECRUITER,
+                    tenant_id="default",
+                ))
+                print(f"[startup] Seeded HR recruiter: {hr_email}", flush=True)
 
-        preset_r = await db.execute(select(PromptPreset).limit(1))
-        if preset_r.scalar_one_or_none() is None:
-            preset = PromptPreset(
-                name="Make Compliance-Pass",
-                kind="transform",
-                prompt_text=COMPLIANCE_REWRITE_USER_TEMPLATE,
-                active=True,
-                created_by_admin=admin.id,
-            )
-            db.add(preset)
-            print("[startup] Seeded default preset: Make Compliance-Pass")
+            preset_r = await db.execute(select(PromptPreset).limit(1))
+            if preset_r.scalar_one_or_none() is None:
+                preset = PromptPreset(
+                    name="Make Compliance-Pass",
+                    kind="transform",
+                    prompt_text=COMPLIANCE_REWRITE_USER_TEMPLATE,
+                    active=True,
+                    created_by_admin=admin.id,
+                )
+                db.add(preset)
+                print("[startup] Seeded default preset: Make Compliance-Pass", flush=True)
 
-        await db.commit()
+            await db.commit()
+    except Exception as exc:
+        import traceback
+        print(f"[startup] ERROR in DB seed: {exc}", flush=True)
+        traceback.print_exc()
+        raise
 
     # ── LangGraph checkpointer (owned here, never per-request) ───────────────
     _db_url_sync = (
