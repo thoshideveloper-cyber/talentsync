@@ -54,11 +54,11 @@ export function BeforeAfter({ rawText, record, onDownload, onCopy }: Props) {
           <LevelBadge level={record.ai_seniority} />
           {record.is_verified ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 border border-green-200">
-              ✓ Verified
+              Verified
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 border border-amber-200">
-              ⚠ Unverified
+              Unverified
             </span>
           )}
         </div>
@@ -134,7 +134,7 @@ export function BeforeAfter({ rawText, record, onDownload, onCopy }: Props) {
             onClick={onDownload}
             className="flex-1 rounded-lg border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            ⬇ Download .docx
+            Download .docx
           </button>
           <button
             onClick={onCopy}

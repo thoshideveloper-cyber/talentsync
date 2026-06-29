@@ -35,21 +35,24 @@ function RowIcon({ status }: { status: FileStatus }) {
       <span className="inline-block w-3.5 h-3.5 border-2 border-border border-t-primary rounded-full animate-spin" />
     )
   }
-  const map: Record<FileStatus, string> = {
-    done: 'text-emerald-500',
-    duplicate: 'text-blue-400',
-    failed: 'text-red-500',
-    pending: 'text-muted-foreground',
-    processing: '',
+  if (status === 'done') {
+    return (
+      <svg className="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+        <path fillRule="evenodd" clipRule="evenodd"
+          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+      </svg>
+    )
   }
-  const glyph: Record<FileStatus, string> = {
-    done: '✓',
-    duplicate: '≡',
-    failed: '✕',
-    pending: '○',
-    processing: '',
+  if (status === 'failed') {
+    return (
+      <svg className="h-3.5 w-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    )
   }
-  return <span className={`text-sm ${map[status]}`}>{glyph[status]}</span>
+  // duplicate / pending → simple status dot
+  const dot = status === 'duplicate' ? 'bg-blue-400' : 'bg-muted-foreground/40'
+  return <span className={`inline-block h-2 w-2 rounded-full ${dot}`} />
 }
 
 function rowBg(status: FileStatus) {
@@ -69,7 +72,7 @@ function statusText(entry: FileEntry) {
       </span>
     )
   }
-  if (entry.status === 'duplicate') return <span className="text-blue-500">Already in system</span>
+  if (entry.status === 'duplicate') return <span className="text-blue-500">Identical copy already in system — saved anyway</span>
   if (entry.status === 'processing') return <span className="text-blue-600">Processing…</span>
   if (entry.status === 'failed') return <span className="text-red-600 truncate">{entry.error ?? 'Failed'}</span>
   return <span className="text-muted-foreground">Pending</span>
@@ -135,14 +138,17 @@ export function BatchUpload({ existingHashes, onProcessed, onNavigateToBoard }: 
       ))
       try {
         const record = await api.extractFile(entry.file)
-        const isDuplicate = seenHashes.has(record.content_hash)
+        // Only an EXACT byte-for-byte match of an existing JD counts as a duplicate.
+        // A different description for the same role has a different hash and is NOT a
+        // duplicate. Either way the record is saved server-side, so always surface it.
+        const isDuplicate = !!record.content_hash && seenHashes.has(record.content_hash)
         seenHashes.add(record.content_hash)
         setEntries(prev => prev.map(e =>
           e.id === entry.id
             ? { ...e, status: isDuplicate ? 'duplicate' : 'done', record }
             : e
         ))
-        if (!isDuplicate) onProcessed(record)
+        onProcessed(record)
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error'
         setEntries(prev => prev.map(e =>

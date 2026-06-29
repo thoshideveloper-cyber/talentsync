@@ -1,26 +1,25 @@
 import { useEffect, useState } from 'react'
 import { api } from './api'
 import type { JobRecord, KpiData, SkillFreq } from './api'
-import { PasteBox } from './components/PasteBox'
+import { authStore } from './lib/auth'
+import { LoginPage } from './components/LoginPage'
 import { KpiStrip } from './components/KpiStrip'
-import { Board } from './components/Board'
-import { LevelingView } from './components/LevelingView'
-import { SkillsView } from './components/SkillsView'
-import { BeforeAfter } from './components/BeforeAfter'
-import { BatchUpload } from './components/BatchUpload'
+import { Workspace } from './components/Workspace'
+import { RolesView } from './components/RolesView'
+import { InsightsView } from './components/InsightsView'
+import { focusJob, clearActiveJob } from './hooks/useActiveJob'
 
-type Tab = 'paste' | 'board' | 'leveling' | 'skills' | 'batch'
+type Tab = 'workspace' | 'roles' | 'insights'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'paste', label: 'Quality Gate' },
-  { id: 'board', label: 'Roles' },
-  { id: 'leveling', label: 'Leveling' },
-  { id: 'skills', label: 'Analytics' },
-  { id: 'batch', label: 'Batch Upload' },
+  { id: 'workspace', label: 'Workspace' },
+  { id: 'roles', label: 'Roles' },
+  { id: 'insights', label: 'Insights' },
 ]
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('paste')
+  const [authed, setAuthed] = useState(authStore.isAuthenticated())
+  const [tab, setTab] = useState<Tab>('workspace')
   const [records, setRecords] = useState<JobRecord[]>([])
   const [kpis, setKpis] = useState<KpiData | null>(null)
   const [skills, setSkills] = useState<SkillFreq[]>([])
@@ -38,75 +37,127 @@ export default function App() {
       setKpis(kData)
       setSkills(sData)
     } catch (e) {
+      if (e instanceof Error && e.message === 'Session expired') return
       setError(e instanceof Error ? e.message : 'Failed to load data')
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { void load() }, [])
+  useEffect(() => {
+    if (authed) void load()
+    else setLoading(false)
+  }, [authed])
+
+  const handleLogin = () => {
+    setAuthed(true)
+    setLoading(true)
+    void load()
+  }
+
+  const handleLogout = () => {
+    authStore.clear()
+    clearActiveJob()
+    setAuthed(false)
+    setRecords([])
+    setKpis(null)
+    setSkills([])
+  }
 
   const handleTabChange = (t: Tab) => {
     setTab(t)
-    if (t !== 'paste') void load()
+    if (t !== 'workspace') void load()
   }
 
-  const handleProcessed = async (record: JobRecord) => {
-    setRecords(prev =>
-      prev.some(r => r.content_hash === record.content_hash)
-        ? prev
-        : [...prev, record]
-    )
+  // A JD was processed or transformed: merge it in and refresh KPIs/skills.
+  const handleChanged = async (record?: JobRecord) => {
+    if (record) {
+      setRecords(prev =>
+        prev.some(r => r.id === record.id) ? prev.map(r => r.id === record.id ? record : r) : [...prev, record]
+      )
+    } else {
+      await load()
+      return
+    }
     try {
       const [kData, sData] = await Promise.all([api.kpis(), api.skills()])
       setKpis(kData)
       setSkills(sData)
-    } catch {}
+    } catch { /* non-fatal */ }
   }
 
-  const handleLastRunDownload = (rec: JobRecord) => {
-    window.open(api.docxUrl(rec.id), '_blank')
+  // Open a role from Roles → focus it and jump to the Workspace review step.
+  const handleOpenRole = (recordId: string) => {
+    void focusJob(recordId, records)
+    setTab('workspace')
   }
 
-  const handleLastRunCopy = async (rec: JobRecord) => {
-    const lines = [
-      `${rec.role} — ${rec.ai_seniority}`,
-      rec.is_verified ? `Verified: "${rec.raw_text_justification}"` : '(unverified)',
-      `Skills: ${rec.required_skills.join(', ')}`,
-      `Summary (indicative): ${rec.one_line_summary}`,
-      `Score: ${rec.quality_score}/100`,
-    ]
-    await navigator.clipboard.writeText(lines.join('\n'))
-  }
+  if (!authed) return <LoginPage onLogin={handleLogin} />
+
+  const user = authStore.getUser()
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/90 backdrop-blur-sm sticky top-0 z-10">
+      <header
+        className="sticky top-0 z-10 border-b"
+        style={{ background: 'hsl(252, 36%, 19%)', borderColor: 'hsl(252, 30%, 28%)' }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between">
+
+            {/* Wordmark */}
             <div className="flex items-center gap-2.5">
-              <div className="rounded-lg bg-primary/10 p-1.5">
-                <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <div className="rounded-md p-1.5" style={{ background: 'hsl(252, 36%, 29%)' }}>
+                <svg
+                  className="h-4 w-4"
+                  style={{ color: 'hsl(252, 50%, 80%)' }}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <span className="text-sm font-bold tracking-tight text-foreground">TalentSync</span>
+              <span className="text-sm font-bold tracking-tight" style={{ color: 'hsl(252, 12%, 95%)' }}>
+                TalentSync
+              </span>
             </div>
+
+            {/* Navigation */}
             <nav className="flex items-center gap-0.5">
               {TABS.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => handleTabChange(t.id)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-semibold tracking-wide transition-colors ${
+                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${
                     tab === t.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                      ? 'bg-white'
+                      : 'text-white/60 hover:text-white/90 hover:bg-white/10'
                   }`}
+                  style={tab === t.id ? { color: 'hsl(252, 36%, 19%)' } : {}}
                 >
                   {t.label}
                 </button>
               ))}
             </nav>
+
+            {/* User */}
+            <div className="flex items-center gap-2">
+              {user && (
+                <span className="hidden sm:block text-xs" style={{ color: 'hsl(252, 12%, 62%)' }}>
+                  {user.email}
+                  <span className="mx-1 opacity-50">·</span>
+                  <span className="capitalize">{user.role}</span>
+                </span>
+              )}
+              <button
+                onClick={handleLogout}
+                className="rounded-md px-3 py-1.5 text-xs font-semibold
+                           text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors duration-150"
+              >
+                Sign out
+              </button>
+            </div>
+
           </div>
         </div>
       </header>
@@ -133,89 +184,16 @@ export default function App() {
 
         {!loading && (
           <>
-            {tab === 'paste' && (
-              <section>
-                <div className="mb-5">
-                  <h2 className="text-lg font-bold text-foreground">Quality Gate</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Paste a raw job draft to normalize and verify it. Every seniority call is backed by an exact quote from source text.
-                  </p>
-                </div>
-                <PasteBox onProcessed={handleProcessed} />
-
-                {records.length > 0 && (() => {
-                  const last = records[records.length - 1]
-                  return (
-                    <div className="mt-12">
-                      <div className="flex items-center gap-3 mb-5">
-                        <div className="h-px flex-1 bg-border" />
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Last Run · {last.role}
-                        </span>
-                        <div className="h-px flex-1 bg-border" />
-                      </div>
-                      <BeforeAfter
-                        rawText={last.raw_jd}
-                        record={last}
-                        onDownload={() => handleLastRunDownload(last)}
-                        onCopy={() => handleLastRunCopy(last)}
-                      />
-                    </div>
-                  )
-                })()}
-              </section>
+            {tab === 'workspace' && (
+              <Workspace records={records} onChanged={handleChanged} />
             )}
 
-            {tab === 'board' && (
-              <section>
-                <div className="mb-5">
-                  <h2 className="text-lg font-bold text-foreground">Role Intelligence</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {records.length} processed role{records.length !== 1 ? 's' : ''} — sort by level, score, or status. Click any row for the grounding quote.
-                  </p>
-                </div>
-                <Board records={records} />
-              </section>
+            {tab === 'roles' && (
+              <RolesView records={records} onOpenRole={handleOpenRole} onBulkFixed={() => void load()} />
             )}
 
-            {tab === 'leveling' && (
-              <section>
-                <div className="mb-5">
-                  <h2 className="text-lg font-bold text-foreground">Leveling Analysis</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Roles where the stated title and text signals disagree by two or more tiers.
-                  </p>
-                </div>
-                <LevelingView records={records} />
-              </section>
-            )}
-
-            {tab === 'skills' && (
-              <section>
-                <div className="mb-5">
-                  <h2 className="text-lg font-bold text-foreground">Analytics</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Workforce composition, skill demand, and quality metrics across all processed roles.
-                  </p>
-                </div>
-                <SkillsView skills={skills} total={records.length} records={records} />
-              </section>
-            )}
-
-            {tab === 'batch' && (
-              <section>
-                <div className="mb-5">
-                  <h2 className="text-lg font-bold text-foreground">Batch Upload</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Upload multiple JD files at once. Each file is parsed and run through the full extraction pipeline — results appear in Roles, Leveling, and Analytics immediately.
-                  </p>
-                </div>
-                <BatchUpload
-                  existingHashes={new Set(records.map(r => r.content_hash))}
-                  onProcessed={handleProcessed}
-                  onNavigateToBoard={() => handleTabChange('board')}
-                />
-              </section>
+            {tab === 'insights' && (
+              <InsightsView records={records} skills={skills} onCloned={() => void load()} />
             )}
           </>
         )}

@@ -1,6 +1,9 @@
 """
 Corrected JD .docx builder — template reconstruction, NOT LLM rewriting.
 Uses only verified fields; zero new LLM call; cannot hallucinate (§8.3).
+
+Also provides build_audit_report() for Phase 1 compliance audit reports with
+methodology disclosure, provenance, findings, and recall caveats.
 """
 from io import BytesIO
 from typing import Any
@@ -9,70 +12,83 @@ from docx import Document
 from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
+# Colour constants
+_RED = RGBColor(0xDC, 0x26, 0x26)
+_AMBER = RGBColor(0xD9, 0x77, 0x06)
+_GREEN = RGBColor(0x16, 0xA3, 0x4A)
+_GREY = RGBColor(0x6B, 0x72, 0x80)
+_LIGHT_GREY = RGBColor(0x9C, 0xA3, 0xAF)
+
 
 def build_corrected_jd(record: dict[str, Any]) -> bytes:
+    """
+    Produces a ready-to-post .docx whose main body IS the corrected JD text.
+    After an agentic refine the raw_jd field holds the rewritten prose; without
+    a rewrite it holds the original normalized text. Either way the recruiter
+    gets a usable document, not just a metadata summary.
+
+    Structure:
+        1. JD body (the corrected / rewritten text — main content)
+        2. ── TalentSync Review Notes (separator) ──
+        3. Flags & corrections that still need human attention
+        4. Quality score + methodology note
+    """
     doc = Document()
 
-    # ── Header ───────────────────────────────────────────────────────────────
-    title = doc.add_heading(record.get("role", "Job Description"), 0)
+    role = record.get("role", "Job Description")
+    jd_body = (record.get("raw_jd") or "").strip()
+
+    # ── 1. Title & level ─────────────────────────────────────────────────────
+    title = doc.add_heading(role, 0)
     title.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     level_line = doc.add_paragraph()
     level_run = level_line.add_run(f"Level: {record.get('ai_seniority', 'Unknown')}")
     level_run.bold = True
 
-    # Verified badge
     if record.get("is_verified"):
         v_run = level_line.add_run("  [VERIFIED]")
         v_run.bold = True
-        v_run.font.color.rgb = RGBColor(0x16, 0xA3, 0x4A)  # green
+        v_run.font.color.rgb = _GREEN
     else:
-        v_run = level_line.add_run("  [UNVERIFIED — level defaulted to Uncertain]")
-        v_run.font.color.rgb = RGBColor(0xDC, 0x26, 0x26)  # red
+        v_run = level_line.add_run("  [UNVERIFIED]")
+        v_run.font.color.rgb = _GREY
 
     doc.add_paragraph()
 
-    # ── Summary (indicative) ─────────────────────────────────────────────────
-    doc.add_heading("Summary (Indicative — AI Generated)", level=2)
-    s_para = doc.add_paragraph(record.get("one_line_summary", ""))
-    s_para.runs[0].italic = True
-    note = doc.add_paragraph()
-    note_run = note.add_run("Note: This summary is AI-generated and not verified against source text.")
-    note_run.font.size = Pt(9)
-    note_run.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
-
-    doc.add_paragraph()
-
-    # ── Skills ───────────────────────────────────────────────────────────────
-    doc.add_heading("Required Skills (Traced from Text)", level=2)
-    skills = record.get("required_skills", [])
-    if skills:
-        skill_para = doc.add_paragraph(", ".join(s.title() for s in skills))
+    # ── 2. JD body — the corrected / rewritten text ───────────────────────────
+    doc.add_heading("Job Description", level=2)
+    if jd_body:
+        for line in jd_body.splitlines():
+            stripped = line.strip()
+            if stripped:
+                doc.add_paragraph(stripped)
+            else:
+                doc.add_paragraph()
     else:
-        doc.add_paragraph("No hard skills explicitly identified in the source text.")
+        no_text = doc.add_paragraph("(No JD text available)")
+        no_text.runs[0].font.color.rgb = _GREY
 
     doc.add_paragraph()
 
-    # ── Grounding quote ───────────────────────────────────────────────────────
-    if record.get("is_verified"):
-        doc.add_heading("Seniority Evidence (Verified Quote)", level=2)
-        q_para = doc.add_paragraph(f'"{record.get("raw_text_justification", "")}"')
-        q_para.runs[0].italic = True
-
+    # ── 3. Separator ──────────────────────────────────────────────────────────
+    sep = doc.add_paragraph("─── TalentSync Review Notes ───")
+    sep.runs[0].font.size = Pt(9)
+    sep.runs[0].font.color.rgb = _LIGHT_GREY
+    sep.runs[0].bold = True
     doc.add_paragraph()
 
-    # ── Corrections / Flags ──────────────────────────────────────────────────
+    # ── 4. Flags & corrections ────────────────────────────────────────────────
     flags = []
     if record.get("audit_mismatch"):
         native = record.get("native_label", "stated level")
         ai = record.get("ai_seniority", "extracted level")
         flags.append(
-            f"LEVEL MISMATCH: Stated/implied title suggests '{native}' but text signals '{ai}' — "
-            f"review before posting."
+            f"LEVEL MISMATCH: Title suggests '{native}' but text signals '{ai}' — review before posting."
         )
     bias = record.get("bias_flags", [])
     if bias:
-        flags.append(f"LANGUAGE FLAGGED FOR REVIEW: {', '.join(bias)}")
+        flags.append(f"LANGUAGE FLAGGED: {', '.join(bias)}")
     if not record.get("pay_range_present"):
         flags.append(
             "NO PAY RANGE: Adding compensation info improves candidate conversion "
@@ -80,29 +96,280 @@ def build_corrected_jd(record: dict[str, Any]) -> bytes:
         )
 
     if flags:
-        doc.add_heading("Corrections & Flags", level=2)
+        doc.add_heading("Review Flags", level=3)
         for flag in flags:
             p = doc.add_paragraph(style="List Bullet")
             p.add_run(flag)
+        doc.add_paragraph()
 
-    doc.add_paragraph()
-
-    # ── Quality score ─────────────────────────────────────────────────────────
-    doc.add_heading("Quality Score", level=2)
+    # ── 5. Quality score ──────────────────────────────────────────────────────
     score = record.get("quality_score", 0)
     breakdown = record.get("score_breakdown", [])
-    doc.add_paragraph(f"{score}/100  ({' · '.join(breakdown) if breakdown else 'no breakdown'})")
-    doc.add_paragraph("This is a relative completeness score, not an absolute grade.")
+    score_note = doc.add_paragraph(
+        f"Quality score: {score}/100"
+        + (f"  ·  {' · '.join(breakdown)}" if breakdown else "")
+    )
+    score_note.runs[0].font.size = Pt(9)
+    score_note.runs[0].font.color.rgb = _GREY
 
-    # ── Footer ────────────────────────────────────────────────────────────────
+    if record.get("is_verified") and record.get("raw_text_justification"):
+        q_para = doc.add_paragraph(f'Seniority evidence: "{record["raw_text_justification"]}"')
+        q_para.runs[0].font.size = Pt(9)
+        q_para.runs[0].italic = True
+        q_para.runs[0].font.color.rgb = _GREY
+
+    # ── 6. Footer ─────────────────────────────────────────────────────────────
     doc.add_paragraph()
     footer_para = doc.add_paragraph()
     footer_run = footer_para.add_run(
-        "Generated by TalentSync · Indicative summary not verified · "
-        "Seniority tied to exact source quote above."
+        "Generated by TalentSync · JD body reflects latest version (original or AI-rewritten) · "
+        "Review flags are advisory — seek legal advice on compliance findings."
     )
     footer_run.font.size = Pt(8)
-    footer_run.font.color.rgb = RGBColor(0x9C, 0xA3, 0xAF)
+    footer_run.font.color.rgb = _LIGHT_GREY
+
+    buf = BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+
+# ── Audit report ──────────────────────────────────────────────────────────────
+
+_TIER_LABEL = {"high_risk": "HIGH-RISK FILTER", "advisory": "ADVISORY"}
+_TIER_COLOR = {"high_risk": _RED, "advisory": _AMBER}
+
+_METHODOLOGY = """\
+TalentSync Phase 1 Compliance Audit — Methodology Disclosure
+
+Detectors used:
+1. Discriminatory Filter Detector (high_risk tier)
+   • filter.age_cap — Regex patterns matching explicit age caps, age limits, and age ranges
+     that are not qualified by "of experience" context.
+   • filter.gender_preference — Patterns detecting explicit gender requirements or preferences
+     in candidate eligibility (e.g., "male candidates only", "gender: female").
+   • filter.marital_status — Patterns detecting marital-status requirements (e.g.,
+     "must be single", "unmarried candidates only").
+   • filter.community_caste — Patterns detecting caste, community, religion, or reservation
+     category (SC/ST/OBC vs "general category") as a hiring criterion, matched against a
+     curated vocabulary plus slash/comma-separated category lists.
+   • filter.disability_exclusion — Patterns detecting disability/medical-status exclusions
+     ("able-bodied only", "no physical disability"). Cited to the Rights of Persons with
+     Disabilities Act 2016.
+   • filter.maternity_status — Patterns detecting pregnancy / family-planning screening
+     ("must not be pregnant"). Cited to the Maternity Benefit Act 1961.
+   • filter.freshers_only — Patterns detecting explicit restriction to freshers or new
+     graduates that excludes experienced candidates (e.g., "freshers only", "experienced
+     candidates need not apply").
+
+2. Inclusive-Language Detector (advisory tier)
+   • language.inclusive — Word-boundary match against a 29-term curated list of
+     performance-culture buzzwords (rockstar, ninja, guru, etc.) that may deter diverse
+     applicants. Advisory only — no statutory hook.
+
+3. Pay-Disclosure Check (advisory tier)
+   • pay.disclosure_absent — Regex match for salary / compensation information. Absence
+     is flagged as an advisory signal; not a statutory mandate for job advertisements in India.
+
+Recall caveat: regex detectors catch explicit written filters only. Implicit bias encoded
+in otherwise-neutral language is out of scope of this version. Precision target for the
+high_risk class: ≥95% (validated against the 50-JD golden set in CI).
+
+Risk framing: "high_risk" denotes litigation/ESG risk — not a definitive legal conclusion.
+No rule in this report carries the label "illegal" unless specifically marked as
+lawyer-verified and pinned to a statutory provision. Seek legal advice before treating
+any finding as a confirmed legal violation.\
+"""
+
+_RECALL_CAVEAT = """\
+Recall Limitations (disclose to any audit recipient):
+• These detectors catch explicit written filters; they cannot detect implicit or coded bias.
+• Company names that coincide with bias terms (e.g., "Hero MotoCorp") may produce advisory
+  findings — apply human judgement.
+• Age references in experience requirements ("5 years of experience") are excluded from
+  age-cap detection, but edge cases may occur.
+• This report covers JD-checkable rules only. Appointment letters, offer letters, and
+  actual employment contracts are outside scope.\
+"""
+
+
+def build_audit_report(
+    record: dict[str, Any],
+    compliance_checks: list[dict[str, Any]],
+    meta: dict[str, Any],
+    audit_trail: list[dict[str, Any]] | None = None,
+) -> bytes:
+    """
+    Generate a compliance audit report DOCX.
+
+    Args:
+        record: the serialised JobRecord dict.
+        compliance_checks: list of serialised ComplianceCheck dicts (from DB or scan).
+        meta: provenance metadata — actor_email, actor_role, generated_at, job_id, version_id.
+        audit_trail: optional list of audit_log rows (actor_email, action, ts, detail).
+    """
+    doc = Document()
+
+    # ── Cover ─────────────────────────────────────────────────────────────────
+    cover = doc.add_heading("TalentSync Compliance Audit Report", 0)
+    cover.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    role_line = doc.add_paragraph()
+    role_run = role_line.add_run(f"Role: {record.get('role', 'Unknown')}")
+    role_run.bold = True
+
+    doc.add_paragraph()
+
+    # ── Provenance ────────────────────────────────────────────────────────────
+    doc.add_heading("Provenance", level=2)
+    prov_data = [
+        ("Generated by", f"{meta.get('actor_email', '—')} ({meta.get('actor_role', '—')})"),
+        ("Generated at", meta.get("generated_at", "—")),
+        ("Job ID", meta.get("job_id", "—")),
+        ("Version ID", meta.get("version_id", "—")),
+        ("JD content hash", record.get("content_hash", "—")),
+    ]
+    for label, value in prov_data:
+        p = doc.add_paragraph()
+        p.add_run(f"{label}: ").bold = True
+        p.add_run(value)
+
+    doc.add_paragraph()
+
+    # ── Executive Summary ─────────────────────────────────────────────────────
+    doc.add_heading("Executive Summary", level=2)
+    high_risk = [c for c in compliance_checks if c.get("risk_tier") == "high_risk"]
+    advisory = [c for c in compliance_checks if c.get("risk_tier") == "advisory"]
+
+    verdict = "WARN — Review Required" if high_risk else ("ADVISORY" if advisory else "PASS")
+    verdict_color = _RED if high_risk else (_AMBER if advisory else _GREEN)
+
+    verdict_para = doc.add_paragraph()
+    verdict_run = verdict_para.add_run(f"Verdict: {verdict}")
+    verdict_run.bold = True
+    verdict_run.font.color.rgb = verdict_color
+
+    summary_lines = [
+        f"• {len(high_risk)} high-risk filter finding(s) detected",
+        f"• {len(advisory)} advisory finding(s) detected",
+    ]
+    for line in summary_lines:
+        doc.add_paragraph(line)
+
+    if high_risk:
+        warn_para = doc.add_paragraph()
+        warn_run = warn_para.add_run(
+            "Action required: High-risk findings must be reviewed by an approver before "
+            "this JD is posted. Override-with-justification is required and will be recorded "
+            "in the audit trail."
+        )
+        warn_run.font.color.rgb = _RED
+    doc.add_paragraph()
+
+    # ── Findings ──────────────────────────────────────────────────────────────
+    doc.add_heading("Compliance Findings", level=2)
+
+    if not compliance_checks:
+        doc.add_paragraph("No compliance issues detected.")
+    else:
+        for c in compliance_checks:
+            tier = c.get("risk_tier", "advisory")
+            tier_label = _TIER_LABEL.get(tier, tier.upper())
+            tier_color = _TIER_COLOR.get(tier, _GREY)
+
+            rule_heading = doc.add_paragraph()
+            rh_run = rule_heading.add_run(f"[{tier_label}] {c.get('rule_id', '—')}")
+            rh_run.bold = True
+            rh_run.font.color.rgb = tier_color
+
+            if c.get("evidence_span"):
+                ev_para = doc.add_paragraph()
+                ev_para.add_run("Evidence: ").bold = True
+                ev_run = ev_para.add_run(f'"{c["evidence_span"]}"')
+                ev_run.italic = True
+                ev_run.font.size = Pt(9)
+
+            if c.get("citation"):
+                cit_para = doc.add_paragraph()
+                cit_para.add_run("Citation: ").bold = True
+                cit_run = cit_para.add_run(c["citation"])
+                cit_run.font.size = Pt(9)
+                cit_run.font.color.rgb = _GREY
+
+            if c.get("checked_at"):
+                ts_para = doc.add_paragraph()
+                ts_run = ts_para.add_run(f"Checked at: {c['checked_at']}")
+                ts_run.font.size = Pt(8)
+                ts_run.font.color.rgb = _LIGHT_GREY
+
+            doc.add_paragraph()
+
+    # ── Methodology Disclosure ────────────────────────────────────────────────
+    doc.add_heading("Methodology Disclosure", level=2)
+    meth_para = doc.add_paragraph(_METHODOLOGY)
+    meth_para.runs[0].font.size = Pt(9)
+    doc.add_paragraph()
+
+    # ── Recall Caveats ────────────────────────────────────────────────────────
+    doc.add_heading("Recall Caveats", level=2)
+    caveat_para = doc.add_paragraph(_RECALL_CAVEAT)
+    caveat_para.runs[0].font.size = Pt(9)
+    doc.add_paragraph()
+
+    # ── Risk-Gradient Key ─────────────────────────────────────────────────────
+    doc.add_heading("Risk-Gradient Key", level=2)
+    rg_lines = [
+        ("high_risk", _RED,
+         "Litigation / ESG risk — explicit discriminatory filter (age cap, gender, "
+         "marital status, caste/community, freshers-only). Not labeled 'illegal' unless "
+         "pinned to a specific statutory provision by legal review. These findings require "
+         "approver review before the JD is posted."),
+        ("advisory", _AMBER,
+         "Advisory / pool-expansion signal — inclusive-language terms or absent pay range. "
+         "No statutory hook in Indian private-sector law as of 2025. Addressed to improve "
+         "candidate reach and reduce reputational exposure."),
+    ]
+    for tier, color, desc in rg_lines:
+        p = doc.add_paragraph()
+        tier_run = p.add_run(f"{tier.upper()}: ")
+        tier_run.bold = True
+        tier_run.font.color.rgb = color
+        desc_run = p.add_run(desc)
+        desc_run.font.size = Pt(9)
+    doc.add_paragraph()
+
+    # ── Audit Trail ───────────────────────────────────────────────────────────
+    doc.add_heading("Audit Trail", level=2)
+    if not audit_trail:
+        doc.add_paragraph("No audit events recorded for this job yet.")
+    else:
+        hdr = doc.add_paragraph()
+        for col in ("Actor", "Action", "Timestamp", "Detail"):
+            r = hdr.add_run(f"{col:<25}")
+            r.bold = True
+            r.font.size = Pt(8)
+        doc.add_paragraph()
+        for row in audit_trail:
+            detail_str = str(row.get("detail") or "")[:80]
+            line = doc.add_paragraph()
+            line_run = line.add_run(
+                f"{(row.get('actor_email') or '—')[:24]:<25}"
+                f"{(row.get('action') or '—')[:24]:<25}"
+                f"{(row.get('ts') or '—')[:24]:<25}"
+                f"{detail_str}"
+            )
+            line_run.font.size = Pt(8)
+            line_run.font.color.rgb = _GREY
+    doc.add_paragraph()
+
+    # ── Footer ────────────────────────────────────────────────────────────────
+    footer_para = doc.add_paragraph()
+    fr = footer_para.add_run(
+        "TalentSync · Compliance Audit Report · For internal review only · "
+        "Not a legal opinion · Seek qualified legal advice before treating "
+        "any finding as a confirmed violation."
+    )
+    fr.font.size = Pt(8)
+    fr.font.color.rgb = _LIGHT_GREY
 
     buf = BytesIO()
     doc.save(buf)

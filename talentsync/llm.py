@@ -15,11 +15,45 @@ On any other error, log and skip to next provider tier.
 import os
 import json
 import time
+from typing import Protocol, runtime_checkable
 from dotenv import load_dotenv
 from pydantic import ValidationError
 
 from .contracts import JobExtractionSchema
 from .prompts import SYSTEM_PROMPT, FEWSHOT, USER_TEMPLATE
+
+
+# ── LLMProvider interface (vLLM swaps in behind this later) ───────────────────
+
+@runtime_checkable
+class LLMProvider(Protocol):
+    def extract(self, text: str) -> JobExtractionSchema | None: ...
+    def generate(self, prompt: str, system: str | None = None) -> str | None: ...
+    def rewrite(self, jd_text: str, instruction: str) -> str | None: ...
+
+
+class GeminiGroqProvider:
+    """Default provider — wraps the module-level extract() and generate() functions.
+
+    vLLM swaps in behind the same interface when self-hosted residency is required.
+    """
+
+    def extract(self, text: str) -> JobExtractionSchema | None:
+        return extract(text)
+
+    def generate(self, prompt: str, system: str | None = None) -> str | None:
+        return generate(prompt, system)
+
+    def rewrite(self, jd_text: str, instruction: str) -> str | None:
+        prompt = (
+            f"Instruction: {instruction}\n\n"
+            f"Job Description to rewrite:\n{jd_text}"
+        )
+        return generate(prompt, "You are an expert JD editor. Rewrite the job description "
+                                "exactly as instructed. Return only the revised JD text.")
+
+
+default_provider: LLMProvider = GeminiGroqProvider()
 
 load_dotenv()
 
@@ -122,6 +156,107 @@ def _try_groq(key: str, model: str, description: str) -> tuple[JobExtractionSche
             return None, True
         print(f"    [error] groq/{model}: {msg[:120]}")
         return None, False
+
+
+# ── Free-form generation (intake drafts, Q&A, preset rewrites) ────────────────
+
+_STUB_GENERATE = (
+    "Software Engineer — Mid-Level\n\n"
+    "About the Role\nWe are seeking a Software Engineer with 3-5 years of experience "
+    "to join our product team. You will own feature development end-to-end and "
+    "collaborate with cross-functional teams.\n\n"
+    "Requirements\n- 3-5 years of relevant experience\n"
+    "- Proficiency in Python and SQL\n"
+    "- Experience with REST APIs and AWS\n\n"
+    "What We Offer\n- Compensation: ₹15-22 LPA\n"
+    "- Hybrid work model (3 days in-office)\n"
+    "- Health insurance for self and dependents\n\n"
+    "We are an equal opportunity employer and welcome applications from all qualified candidates."
+)
+
+
+def _try_gemini_generate(
+    key: str, model: str, prompt: str, system: str | None
+) -> tuple[str | None, bool]:
+    from google import genai
+    from google.genai import types
+    try:
+        client = genai.Client(api_key=key)
+        full = f"{system}\n\n{prompt}" if system else prompt
+        response = client.models.generate_content(
+            model=model,
+            contents=full,
+            config=types.GenerateContentConfig(temperature=0.3),
+        )
+        text = response.text.strip()
+        return text if text else None, False
+    except Exception as e:
+        msg = str(e)
+        if "429" in msg or "RESOURCE_EXHAUSTED" in msg or "503" in msg or "UNAVAILABLE" in msg:
+            print(f"    [rotate] gemini/{model} quota/unavail -> next slot (generate)")
+            return None, True
+        print(f"    [error] gemini/{model} generate: {msg[:120]}")
+        return None, False
+
+
+def _try_groq_generate(
+    key: str, model: str, prompt: str, system: str | None
+) -> tuple[str | None, bool]:
+    try:
+        from groq import Groq
+    except ImportError:
+        return None, False
+
+    try:
+        client = Groq(api_key=key)
+        messages: list[dict] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        completion = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=0.3,
+        )
+        text = completion.choices[0].message.content.strip()
+        return text if text else None, False
+    except Exception as e:
+        msg = str(e)
+        if "429" in msg or "rate" in msg.lower() or "quota" in msg.lower():
+            print(f"    [rotate] groq/{model} rate-limited -> next slot (generate)")
+            return None, True
+        print(f"    [error] groq/{model} generate: {msg[:120]}")
+        return None, False
+
+
+def generate(prompt: str, system: str | None = None) -> str | None:
+    """
+    Free-form text generation using the same round-robin pool as extract().
+    Used for intake drafts, Q&A answers, and preset rewrites. Returns None on failure.
+    """
+    if _STUB_MODE:
+        return _STUB_GENERATE
+
+    if not _POOL:
+        print("    [error] no API keys configured in .env")
+        return None
+
+    n = len(_POOL)
+    for i, (provider, key, model) in enumerate(_POOL):
+        result, rotate = (
+            _try_gemini_generate(key, model, prompt, system)
+            if provider == "gemini"
+            else _try_groq_generate(key, model, prompt, system)
+        )
+        if result is not None:
+            if i > 0:
+                print(f"    [ok] slot {i+1}/{n}: {provider}/{model} (generate)")
+            return result
+        if rotate:
+            time.sleep(2)
+
+    print("    [warn] all pool slots exhausted (generate)")
+    return None
 
 
 # ── Stub ───────────────────────────────────────────────────────────────────────

@@ -1,0 +1,30 @@
+DevOps Engineer — Infrastructure
+Company: CloudBase Solutions
+Location: Pune (Hybrid)
+Salary: ₹18–26 LPA
+
+About the Role
+We need a DevOps Engineer who is a rockstar at automation and loves owning infrastructure end-to-end. If you have a ninja mindset and thrive in a fast-paced startup culture, this is for you.
+
+Responsibilities
+- Own CI/CD pipelines across GitHub Actions and Jenkins
+- Manage Kubernetes clusters on AWS EKS
+- Implement monitoring and alerting (Prometheus, Grafana)
+- Collaborate with developers to ship faster with fewer incidents
+
+Requirements
+- 3–5 years of DevOps or platform engineering experience
+- Strong knowledge of Kubernetes, Terraform, and AWS
+- Scripting skills in Python or Bash
+- A hustler who can work independently with minimal supervision
+
+Nice to Have
+- Experience with service mesh (Istio, Linkerd)
+- Familiarity with GitOps (ArgoCD, Flux)
+
+Compensation
+- Salary: ₹18–26 LPA
+- Health insurance
+- 20 days leave
+
+We are an equal opportunity employer.

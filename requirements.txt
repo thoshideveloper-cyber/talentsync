@@ -7,3 +7,13 @@ uvicorn[standard]
 python-docx
 python-multipart
 pdfplumber
+# Phase 0 additions
+sqlalchemy[asyncio]>=2.0
+alembic>=1.12
+asyncpg>=0.29
+python-jose[cryptography]
+passlib[bcrypt]
+# Test dependencies
+pytest>=8.0
+pytest-asyncio>=0.21
+httpx>=0.25

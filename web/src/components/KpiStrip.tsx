@@ -9,63 +9,96 @@ function parseFrac(s: string): [number, number] | null {
   return m ? [parseInt(m[1]), parseInt(m[2])] : null
 }
 
-interface Tile {
-  label: string
-  raw: string | number
-  accent?: boolean
-  warn?: boolean
+type StatKind = 'neutral'
+
+interface Stat {
+  label:  string
+  value:  string | number
+  detail: string | null
+  kind:   StatKind
+}
+
+function buildStats(kpis: KpiData): Stat[] {
+  const toDisplay = (raw: string | number): string | number => {
+    if (typeof raw === 'string') {
+      const frac = parseFrac(raw)
+      if (frac) return `${Math.round((frac[0] / Math.max(frac[1], 1)) * 100)}%`
+    }
+    return raw
+  }
+
+  const toDetail = (raw: string | number): string | null => {
+    if (typeof raw === 'string') {
+      const frac = parseFrac(raw)
+      if (frac) return `${frac[0]} of ${frac[1]}`
+    }
+    return null
+  }
+
+  return [
+    {
+      label: 'Roles processed',
+      value: toDisplay(kpis.total),
+      detail: toDetail(kpis.total),
+      kind: 'neutral',
+    },
+    {
+      label: 'Bias flagged',
+      value: toDisplay(kpis.flagged_for_review),
+      detail: toDetail(kpis.flagged_for_review),
+      kind: 'neutral',
+    },
+    {
+      label: 'Leveling flags',
+      value: toDisplay(kpis.leveling_flags),
+      detail: toDetail(kpis.leveling_flags),
+      kind: 'neutral',
+    },
+    {
+      label: 'With pay range',
+      value: toDisplay(kpis.with_pay_range),
+      detail: toDetail(kpis.with_pay_range),
+      kind: 'neutral',
+    },
+    {
+      label: 'Quotes verified',
+      value: toDisplay(kpis.verified),
+      detail: toDetail(kpis.verified),
+      kind: 'neutral',
+    },
+  ]
 }
 
 export function KpiStrip({ kpis }: Props) {
-  const tiles: Tile[] = [
-    { label: 'Roles Processed', raw: kpis.total },
-    { label: 'Bias Flagged', raw: kpis.flagged_for_review, warn: true },
-    { label: 'Leveling Flags', raw: kpis.leveling_flags, warn: true },
-    { label: 'Pay Range', raw: kpis.with_pay_range },
-    { label: 'Quotes Verified', raw: kpis.verified, accent: true },
-  ]
+  const stats = buildStats(kpis)
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      {tiles.map((t) => {
-        const frac = typeof t.raw === 'string' ? parseFrac(t.raw) : null
-        const pct = frac ? Math.round((frac[0] / Math.max(frac[1], 1)) * 100) : null
-        const displayValue = typeof t.raw === 'number' ? t.raw : frac ? frac[0] : t.raw
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex flex-wrap divide-y divide-border sm:divide-y-0 sm:divide-x sm:divide-border">
+        {stats.map((stat) => (
+          <StatCell key={stat.label} stat={stat} />
+        ))}
+      </div>
+    </div>
+  )
+}
 
-        return (
-          <div
-            key={t.label}
-            className={`rounded-xl border p-4 flex flex-col gap-1 ${
-              t.accent ? 'border-emerald-200 bg-emerald-50/40' : 'border-border bg-card'
-            }`}
-          >
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {t.label}
-            </p>
-            <p className={`text-2xl font-bold tabular-nums leading-none mt-0.5 ${
-              t.accent ? 'text-emerald-700' : 'text-foreground'
-            }`}>
-              {displayValue}
-            </p>
-            {frac && pct !== null && (
-              <div className="mt-1.5">
-                <div className="h-1 rounded-full bg-muted/80 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor: t.accent ? '#10b981'
-                        : t.warn && pct > 25 ? '#f97316'
-                        : '#3b82f6',
-                    }}
-                  />
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-0.5">{pct}% of {frac[1]}</p>
-              </div>
-            )}
-          </div>
-        )
-      })}
+function StatCell({ stat }: { stat: Stat }) {
+  return (
+    <div className="flex-1 min-w-[9rem] px-5 py-4">
+      <p className="text-xs text-muted-foreground leading-none mb-2.5">
+        {stat.label}
+      </p>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-[1.625rem] font-bold leading-none tabular-nums">
+          {stat.value}
+        </span>
+      </div>
+      {stat.detail && (
+        <p className="mt-1.5 text-[11px] text-muted-foreground tabular-nums">
+          {stat.detail}
+        </p>
+      )}
     </div>
   )
 }

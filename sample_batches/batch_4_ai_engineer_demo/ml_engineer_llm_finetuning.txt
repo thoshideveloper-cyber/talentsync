@@ -1,0 +1,33 @@
+Machine Learning Engineer – LLM Fine-Tuning
+Company: Bharat AI Solutions
+Location: Pune (Remote-first)
+
+About the Role
+Bharat AI Solutions is building the next generation of domain-adapted language models for the
+Indian enterprise market. We are hiring fresh graduates only who can grow with us from day one and
+shape the culture of the team. Experienced candidates need not apply — we value raw talent
+over prior baggage.
+
+Requirements
+- Freshers only (2024 or 2025 pass-out); those with prior full-time experience
+  will not be considered
+- Candidates from the general category preferred; we are a small family-run firm and prefer a
+  culturally homogeneous team
+- Strong academic record: 8.0 CGPA or above from a recognised university
+- Solid foundation in Python, NumPy, and PyTorch fundamentals
+- Conceptual understanding of transformer architectures and attention mechanisms
+- Familiarity with Hugging Face Transformers and the PEFT / LoRA ecosystem
+
+Responsibilities
+- Assist senior researchers in curating instruction-tuning datasets
+- Run fine-tuning experiments on A100 / H100 GPU clusters
+- Track experiment results in MLflow and maintain reproducibility standards
+- Write clean, documented code following internal conventions
+- Prepare weekly progress reports for the research lead
+
+Perks
+- Access to state-of-the-art GPU infrastructure
+- Direct mentorship from published ML researchers
+- Opportunity to co-author technical blog posts and papers
+
+Note: Compensation details are confidential and will be discussed during the offer stage.

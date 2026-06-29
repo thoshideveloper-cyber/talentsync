@@ -1,262 +1,195 @@
 """
-FastAPI backend — §8.1 endpoints.
-Dashboard load = 0 LLM calls (serves cached results.json).
-Only POST /api/extract makes a live LLM call.
+FastAPI application entry point.
+
+Changes from MVP:
+- results.json store removed; Postgres (via SQLAlchemy async) is the source of truth.
+- CORS locked: no wildcard origin. Add origins via CORS_ORIGINS env var (comma-separated).
+- JWT auth required on every endpoint (except /api/auth/login).
+- Startup: seeds a default admin user if the users table is empty, and seeds the
+  "Make Compliance-Pass" preset if the prompt_presets table is empty.
 """
-import csv
-import io
-import json
+import os
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+# psycopg3 async (used by AsyncPostgresSaver) requires SelectorEventLoop on Windows.
+# This MUST be set at module level — before uvicorn creates the event loop.
+if sys.platform == "win32":
+    import asyncio as _asyncio
+    _asyncio.set_event_loop_policy(_asyncio.WindowsSelectorEventLoopPolicy())
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
-from pydantic import BaseModel
+from sqlalchemy import select, text
 
-# Allow running from project root: python -m api.main
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
-from talentsync.core import process_jd
-from api.docx_builder import build_corrected_jd
+from db.models import PromptPreset, User, UserRole
+from db.session import AsyncSessionLocal
+from api.auth import hash_password
+from api.routers.auth import router as auth_router
+from api.routers.jobs import router as jobs_router
+from api.routers.bulk import router as bulk_router
+from api.routers.intake import router as intake_router
+from api.routers.presets import router as presets_router
+from api.routers.chat import router as chat_router
+from api.routers.refine import router as refine_router
+from api.routers.dashboard import router as dashboard_router
+from api.routers.templates import router as templates_router
+from api.routers.pay_hints import router as pay_hints_router
+from talentsync.prompts import COMPLIANCE_REWRITE_USER_TEMPLATE
 
-RESULTS_PATH = ROOT / "data" / "results.json"
 
-app = FastAPI(title="TalentSync API", version="1.0")
+# ── Allowed origins (no wildcard in production) ──────────────────────────────
+_DEFAULT_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+_CORS_ORIGINS: list[str] = [
+    o.strip()
+    for o in os.environ.get("CORS_ORIGINS", _DEFAULT_ORIGINS).split(",")
+    if o.strip()
+]
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Startup:
+    - Apply any pending Alembic migrations (prevents schema-drift 500s)
+    - Verify DB connectivity
+    - Seed admin user and default preset
+    - Initialise AsyncPostgresSaver (LangGraph checkpointer) and stash in app.state
+    """
+    import sys
+
+    from db.session import engine as _engine, IS_SQLITE
+
+    # ── Schema setup ─────────────────────────────────────────────────────────
+    if IS_SQLITE:
+        # Alembic migrations are Postgres-specific (JSONB/ENUM DDL). On SQLite,
+        # build the schema straight from the ORM metadata instead.
+        from db.base import Base
+        import db.models  # noqa: F401  (ensures all tables are registered)
+        async with _engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("[startup] SQLite schema created via metadata.create_all")
+    else:
+        # Auto-migrate: runs alembic in a thread so it can call asyncio.run() safely
+        # (alembic's env.py uses asyncio.run which can't nest inside the running loop).
+        try:
+            import concurrent.futures
+            from alembic import command as alembic_command
+            from alembic.config import Config as AlembicConfig
+            alembic_cfg = AlembicConfig(str(ROOT / "alembic.ini"))
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(alembic_command.upgrade, alembic_cfg, "head")
+                future.result(timeout=60)
+            print("[startup] Alembic migrations: up to date")
+        except Exception as exc:
+            print(f"[startup] WARNING: Alembic upgrade failed ({exc}). Continuing anyway.")
+
+    # ── DB check + seed ───────────────────────────────────────────────────────
+    async with AsyncSessionLocal() as db:
+        await db.execute(text("SELECT 1"))
+
+        admin_email = os.environ.get("ADMIN_EMAIL", "admin@talentsync.local")
+        admin_pass = os.environ.get("ADMIN_PASSWORD", "changeme123")
+
+        admin_r = await db.execute(select(User).where(User.email == admin_email))
+        admin = admin_r.scalar_one_or_none()
+        if admin is None:
+            admin = User(
+                email=admin_email,
+                hashed_password=hash_password(admin_pass),
+                role=UserRole.ADMIN,
+                tenant_id="default",
+            )
+            db.add(admin)
+            await db.flush()
+            print(f"[startup] Seeded admin user: {admin_email}")
+
+        hr_email = os.environ.get("HR_EMAIL", "hr@talentsync.local")
+        hr_pass = os.environ.get("HR_PASSWORD", "hr123456")
+        hr_r = await db.execute(select(User).where(User.email == hr_email))
+        if hr_r.scalar_one_or_none() is None:
+            db.add(User(
+                email=hr_email,
+                hashed_password=hash_password(hr_pass),
+                role=UserRole.RECRUITER,
+                tenant_id="default",
+            ))
+            print(f"[startup] Seeded HR recruiter: {hr_email}")
+
+        preset_r = await db.execute(select(PromptPreset).limit(1))
+        if preset_r.scalar_one_or_none() is None:
+            preset = PromptPreset(
+                name="Make Compliance-Pass",
+                kind="transform",
+                prompt_text=COMPLIANCE_REWRITE_USER_TEMPLATE,
+                active=True,
+                created_by_admin=admin.id,
+            )
+            db.add(preset)
+            print("[startup] Seeded default preset: Make Compliance-Pass")
+
+        await db.commit()
+
+    # ── LangGraph checkpointer (owned here, never per-request) ───────────────
+    _db_url_sync = os.environ.get(
+        "DATABASE_URL", "postgresql+asyncpg://postgres@localhost:5432/talentsync"
+    ).replace("postgresql+asyncpg://", "postgresql://")
+
+    saver_cm = None
+    try:
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+        saver_cm = AsyncPostgresSaver.from_conn_string(_db_url_sync)
+        app.state.langgraph_saver = await saver_cm.__aenter__()
+        await app.state.langgraph_saver.setup()
+        print("[startup] LangGraph AsyncPostgresSaver initialised (durable)")
+    except Exception as exc:
+        print(f"[startup] AsyncPostgresSaver unavailable ({exc}); falling back to MemorySaver")
+        from langgraph.checkpoint.memory import MemorySaver
+        app.state.langgraph_saver = MemorySaver()
+        saver_cm = None  # nothing to close on shutdown
+
+    yield  # ← app runs here
+
+    # ── Shutdown: close saver ─────────────────────────────────────────────────
+    if saver_cm is not None:
+        try:
+            await saver_cm.__aexit__(None, None, None)
+        except Exception:
+            pass
+
+
+app = FastAPI(title="TalentSync API", version="2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "*"],
+    allow_origins=_CORS_ORIGINS,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
+app.include_router(jobs_router)
+app.include_router(bulk_router)
+app.include_router(intake_router)
+app.include_router(presets_router)
+app.include_router(chat_router)
+app.include_router(refine_router)
+app.include_router(dashboard_router)
+app.include_router(templates_router)
+app.include_router(pay_hints_router)
 
-# ── In-memory store (loaded once at startup) ──────────────────────────────────
-
-_records: list[dict[str, Any]] = []
-
-
-def _load_results() -> list[dict[str, Any]]:
-    if RESULTS_PATH.exists():
-        try:
-            return json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return []
-
-
-def _save_results(records: list[dict]) -> None:
-    RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    RESULTS_PATH.write_text(json.dumps(records, indent=2, ensure_ascii=False), encoding="utf-8")
+from api.routers.bulk_autofix import router as bulk_autofix_router
+app.include_router(bulk_autofix_router)
 
 
-@app.on_event("startup")
-async def startup():
-    global _records
-    _records = _load_results()
-
-
-# ── Request/Response models ────────────────────────────────────────────────────
-
-class ExtractRequest(BaseModel):
-    text: str
-
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
-
-@app.get("/api/records")
-def get_records() -> list[dict]:
-    return _records
-
-
-@app.get("/api/records/{record_id}")
-def get_record(record_id: str) -> dict:
-    for rec in _records:
-        if rec["id"] == record_id:
-            return rec
-    raise HTTPException(404, f"Record '{record_id}' not found")
-
-
-@app.post("/api/extract")
-def extract_jd(req: ExtractRequest) -> dict:
-    """Live LLM call — the only endpoint that calls the model."""
-    if not req.text.strip():
-        raise HTTPException(400, "text must not be empty")
-
-    # Dedup check
-    import hashlib
-    h = hashlib.sha256(req.text.encode()).hexdigest()
-    for rec in _records:
-        if rec.get("content_hash") == h:
-            return rec
-
-    record = process_jd(req.text)
-
-    # Persist to results.json (append to in-memory list)
-    _records.append(record)
-    _save_results(_records)
-
-    return record
-
-
-@app.post("/api/extract/file")
-async def extract_from_file(file: UploadFile = File(...)) -> dict:
-    """Parse a .txt / .docx / .pdf file and run it through the extraction pipeline."""
-    filename = file.filename or "unknown"
-    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-
-    raw = await file.read()
-
-    if ext in ("txt", "md"):
-        text = raw.decode("utf-8", errors="replace")
-    elif ext == "docx":
-        try:
-            from docx import Document  # python-docx
-            doc = Document(io.BytesIO(raw))
-            text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
-        except Exception as exc:
-            raise HTTPException(400, f"Could not parse .docx: {exc}") from exc
-    elif ext == "pdf":
-        try:
-            import pdfplumber
-            with pdfplumber.open(io.BytesIO(raw)) as pdf:
-                text = "\n".join(page.extract_text() or "" for page in pdf.pages)
-        except ImportError as exc:
-            raise HTTPException(
-                400, "PDF support requires pdfplumber — run: pip install pdfplumber"
-            ) from exc
-        except Exception as exc:
-            raise HTTPException(400, f"Could not parse .pdf: {exc}") from exc
-    else:
-        raise HTTPException(
-            400,
-            f"Unsupported file type '.{ext}'. Upload a .txt, .docx, or .pdf file.",
-        )
-
-    text = text.strip()
-    if len(text) < 50:
-        raise HTTPException(
-            400, f"'{filename}' is too short to be a valid JD (< 50 characters after parsing)."
-        )
-
-    return extract_jd(ExtractRequest(text=text))
-
-
-@app.get("/api/kpis")
-def get_kpis() -> dict:
-    """Returns counts + fractions (not bare %) for the KPI strip."""
-    n = len(_records)
-    if n == 0:
-        return {
-            "total": 0,
-            "flagged_for_review": "0 of 0",
-            "leveling_flags": "0 of 0",
-            "with_pay_range": "0 of 0",
-            "verified": "0 of 0",
-            "hallucination_note": "pre-filter rate unavailable (post-filter: 0 of 0 skills)",
-        }
-
-    flagged = sum(1 for r in _records if r.get("bias_flags"))
-    level_flags = sum(1 for r in _records if r.get("audit_mismatch"))
-    with_pay = sum(1 for r in _records if r.get("pay_range_present"))
-    verified = sum(1 for r in _records if r.get("is_verified"))
-    total_skills = sum(len(r.get("required_skills", [])) for r in _records)
-
-    return {
-        "total": n,
-        "flagged_for_review": f"{flagged} of {n}",
-        "leveling_flags": f"{level_flags} of {n}",
-        "with_pay_range": f"{with_pay} of {n}",
-        "verified": f"{verified} of {n}",
-        "hallucination_note": (
-            f"pre-filter rate: see eval.py output; "
-            f"post-filter: 0 of {total_skills} skills (by construction)"
-        ),
-    }
-
-
-@app.get("/api/skills")
-def get_skills() -> list[dict]:
-    """Returns skill → frequency for the 'skills mentioned' view."""
-    freq: dict[str, int] = {}
-    for rec in _records:
-        for skill in rec.get("required_skills", []):
-            freq[skill] = freq.get(skill, 0) + 1
-    return sorted(
-        [{"skill": k, "count": v} for k, v in freq.items()],
-        key=lambda x: -x["count"],
-    )
-
-
-@app.get("/api/records/{record_id}/docx")
-def download_docx(record_id: str) -> Response:
-    rec = None
-    for r in _records:
-        if r["id"] == record_id:
-            rec = r
-            break
-    if rec is None:
-        raise HTTPException(404, f"Record '{record_id}' not found")
-
-    content = build_corrected_jd(rec)
-    filename = f"{record_id}_corrected.docx"
-    return Response(
-        content=content,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
-
-
-@app.post("/api/extract/docx")
-def download_paste_docx(req: ExtractRequest) -> Response:
-    """Download .docx for a pasted JD (same as /api/extract but returns file)."""
-    record = extract_jd(req)
-    content = build_corrected_jd(record)
-    filename = "corrected_jd.docx"
-    return Response(
-        content=content,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
-
-
-@app.get("/api/export.csv")
-def export_csv() -> StreamingResponse:
-    if not _records:
-        raise HTTPException(404, "No records to export")
-
-    output = io.StringIO()
-    fieldnames = [
-        "id", "role", "input_format", "ai_seniority", "native_label",
-        "is_verified", "audit_mismatch", "quality_score",
-        "pay_range_present", "required_skills", "bias_flags",
-        "one_line_summary", "raw_text_justification", "status",
-    ]
-    writer = csv.DictWriter(
-        output, fieldnames=fieldnames, extrasaction="ignore",
-        quoting=csv.QUOTE_ALL, lineterminator="\n",
-    )
-    writer.writeheader()
-    for rec in _records:
-        row = dict(rec)
-        row["required_skills"] = ", ".join(rec.get("required_skills", []))
-        # Collapse internal newlines so each record stays on one CSV line
-        if "raw_text_justification" in row and isinstance(row["raw_text_justification"], str):
-            row["raw_text_justification"] = " ".join(row["raw_text_justification"].split())
-        if "one_line_summary" in row and isinstance(row["one_line_summary"], str):
-            row["one_line_summary"] = " ".join(row["one_line_summary"].split())
-        row["bias_flags"] = ", ".join(rec.get("bias_flags", []))
-        writer.writerow(row)
-
-    output.seek(0)
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=talentsync_export.csv"},
-    )
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":
