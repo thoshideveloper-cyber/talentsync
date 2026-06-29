@@ -13,6 +13,7 @@ alembic>=1.12
 asyncpg>=0.29
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt==4.0.1
 langgraph>=1.2
 langchain-core>=1.4
 langchain-google-genai>=4.2
